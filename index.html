@@ -1,28 +1,436 @@
 <!DOCTYPE html>
-<html>
+<html lang="pt-BR">
 <head>
-    <title>Painel LRMODS</title>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>🧠 Escola IA - LRMODS</title>
     <style>
-        body { background: #0a0a0a; color: #fff; font-family: monospace; padding: 20px; }
-        .card { background: #1a1a2e; padding: 20px; border-radius: 10px; margin: 10px 0; }
-        .stat { color: #00ff88; font-size: 2em; }
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body { 
+            background: #0a0a0a; 
+            color: #fff; 
+            font-family: 'Courier New', monospace;
+            padding: 20px;
+            min-height: 100vh;
+        }
+        .container { max-width: 1200px; margin: 0 auto; }
+        
+        .header {
+            background: linear-gradient(135deg, #1a1a2e, #16213e);
+            padding: 30px;
+            border-radius: 15px;
+            text-align: center;
+            margin-bottom: 20px;
+            border: 1px solid #0f3460;
+        }
+        .header h1 { font-size: 2.5em; color: #00ff88; }
+        
+        .grid {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 20px;
+        }
+        
+        .card {
+            background: #1a1a2e;
+            padding: 20px;
+            border-radius: 10px;
+            border: 1px solid #0f3460;
+        }
+        
+        .stat { 
+            font-size: 2.5em; 
+            color: #00ff88; 
+            font-weight: bold;
+        }
+        
+        .risk-low { color: #00ff88; }
+        .risk-medium { color: #ffaa00; }
+        .risk-high { color: #ff4444; }
+        .risk-critical { color: #ff0000; animation: blink 1s infinite; }
+        
+        @keyframes blink {
+            50% { opacity: 0.5; }
+        }
+        
+        #chatBox {
+            height: 400px;
+            overflow-y: auto;
+            background: #0a0a0a;
+            padding: 15px;
+            border-radius: 8px;
+            margin-bottom: 15px;
+            border: 1px solid #0f3460;
+        }
+        
+        .message {
+            margin: 10px 0;
+            padding: 10px;
+            border-radius: 8px;
+            max-width: 80%;
+        }
+        
+        .user-msg {
+            background: #0f3460;
+            margin-left: auto;
+            text-align: right;
+        }
+        
+        .ia-msg {
+            background: #16213e;
+            margin-right: auto;
+            border-left: 3px solid #00ff88;
+        }
+        
+        .input-group {
+            display: flex;
+            gap: 10px;
+        }
+        
+        input, button {
+            padding: 12px;
+            border: 1px solid #0f3460;
+            border-radius: 8px;
+            background: #0a0a0a;
+            color: #fff;
+            font-family: 'Courier New', monospace;
+        }
+        
+        input { flex: 1; }
+        
+        button {
+            background: #0f3460;
+            cursor: pointer;
+            font-weight: bold;
+            transition: 0.3s;
+        }
+        
+        button:hover {
+            background: #00ff88;
+            color: #000;
+        }
+        
+        .btn-danger { background: #ff4444; }
+        .btn-danger:hover { background: #ff6666; color: #fff; }
+        
+        .btn-success { background: #00aa55; }
+        .btn-success:hover { background: #00ff88; color: #000; }
+        
+        .lesson-card {
+            background: #0a0a0a;
+            padding: 15px;
+            border-radius: 8px;
+            margin: 10px 0;
+            border: 1px solid #0f3460;
+            cursor: pointer;
+            transition: 0.3s;
+        }
+        
+        .lesson-card:hover {
+            border-color: #00ff88;
+            background: #0f3460;
+        }
+        
+        .badge {
+            display: inline-block;
+            padding: 3px 8px;
+            border-radius: 4px;
+            font-size: 0.8em;
+            margin: 2px;
+        }
+        
+        .badge-success { background: #00aa55; }
+        .badge-warning { background: #ffaa00; color: #000; }
+        .badge-danger { background: #ff4444; }
+        
+        pre {
+            background: #000;
+            padding: 10px;
+            border-radius: 5px;
+            overflow-x: auto;
+            margin: 10px 0;
+            border-left: 3px solid #00ff88;
+        }
+        
+        @media (max-width: 768px) {
+            .grid { grid-template-columns: 1fr; }
+        }
     </style>
 </head>
 <body>
-    <h1>🧠 Painel LRMODS</h1>
-    <div class="card">
-        <p>Online: <span class="stat" id="online">0</span></p>
-        <p>Scans Anti-Cheat: <span id="scans">0</span></p>
+    <div class="container">
+        <!-- HEADER -->
+        <div class="header">
+            <h1>🧠 Escola IA - LRMODS</h1>
+            <p style="color: #aaa;">Ensine sua Inteligência Artificial a ser a melhor!</p>
+        </div>
+        
+        <!-- STATS RÁPIDOS -->
+        <div style="display: grid; grid-template-columns: repeat(4, 1fr); gap: 10px; margin-bottom: 20px;">
+            <div class="card" style="text-align: center;">
+                <div style="color: #aaa; font-size: 0.8em;">ONLINE</div>
+                <div class="stat" id="online">0</div>
+            </div>
+            <div class="card" style="text-align: center;">
+                <div style="color: #aaa; font-size: 0.8em;">ESTADOS IA</div>
+                <div class="stat" id="estados">0</div>
+            </div>
+            <div class="card" style="text-align: center;">
+                <div style="color: #aaa; font-size: 0.8em;">SCANS</div>
+                <div class="stat" id="scans">0</div>
+            </div>
+            <div class="card" style="text-align: center;">
+                <div style="color: #aaa; font-size: 0.8em;">RISCO</div>
+                <div class="stat" id="risco">BAIXO</div>
+            </div>
+        </div>
+        
+        <div class="grid">
+            <!-- CHAT COM IA -->
+            <div class="card" style="grid-column: span 1;">
+                <h2 style="margin-bottom: 15px;">💬 Converse com a IA</h2>
+                <div id="chatBox">
+                    <div class="message ia-msg">
+                        <strong>🧠 Professora IA:</strong><br>
+                        Olá! Sou sua professora de IA! Você pode me ensinar sobre:
+                        <br><br>
+                        📊 <b>Dados de combate</b> - Me conte sobre kills, mortes, winrate<br>
+                        🛡️ <b>Anti-cheat</b> - Me avise sobre arquivos suspeitos<br>
+                        🎯 <b>Configurações</b> - Pergunte qual o melhor FOV<br>
+                        ⚠️ <b>Riscos</b> - Me alerte sobre possíveis bans<br>
+                        <br>
+                        <i>Digite sua mensagem abaixo para começar!</i>
+                    </div>
+                </div>
+                <div class="input-group">
+                    <input type="text" id="chatInput" placeholder="Ensine algo para a IA..." onkeypress="if(event.key==='Enter') enviarMensagem()">
+                    <button onclick="enviarMensagem()">📤 Enviar</button>
+                </div>
+                <div style="margin-top: 10px; display: flex; gap: 5px; flex-wrap: wrap;">
+                    <button onclick="enviarRapido('Qual o melhor FOV para esse servidor?')" style="font-size: 0.8em;">🎯 FOV</button>
+                    <button onclick="enviarRapido('Analise os riscos de ban agora')" style="font-size: 0.8em;">🛡️ Risco</button>
+                    <button onclick="enviarRapido('Como melhorar minha mira?')" style="font-size: 0.8em;">🎯 Mira</button>
+                    <button onclick="enviarRapido('Detecte padrões suspeitos no servidor')" style="font-size: 0.8em;">🔍 Scan</button>
+                </div>
+            </div>
+            
+            <!-- LIÇÕES E TREINAMENTO -->
+            <div class="card" style="grid-column: span 1;">
+                <h2 style="margin-bottom: 15px;">📚 Lições para Ensinar a IA</h2>
+                
+                <div class="lesson-card" onclick="enviarLicao('lição1')">
+                    <strong>📊 Lição 1: Dados de Combate</strong>
+                    <p style="color: #aaa; font-size: 0.9em;">Ensine a IA a analisar winrate, K/D, e padrões de luta</p>
+                    <span class="badge badge-success">Fácil</span>
+                </div>
+                
+                <div class="lesson-card" onclick="enviarLicao('lição2')">
+                    <strong>🛡️ Lição 2: Detecção de Anti-Cheat</strong>
+                    <p style="color: #aaa; font-size: 0.9em;">Mostre como identificar armadilhas e armadilhas de ban</p>
+                    <span class="badge badge-warning">Médio</span>
+                </div>
+                
+                <div class="lesson-card" onclick="enviarLicao('lição3')">
+                    <strong>🎯 Lição 3: Otimização de Aimbot</strong>
+                    <p style="color: #aaa; font-size: 0.9em;">Ensine sobre FOV, suavização, e wall check</p>
+                    <span class="badge badge-success">Fácil</span>
+                </div>
+                
+                <div class="lesson-card" onclick="enviarLicao('lição4')">
+                    <strong>🧬 Lição 4: DNA da Oracle</strong>
+                    <p style="color: #aaa; font-size: 0.9em;">Explique como funciona o sistema de Q-Learning</p>
+                    <span class="badge badge-danger">Avançado</span>
+                </div>
+                
+                <div class="lesson-card" onclick="enviarLicao('lição5')">
+                    <strong>👥 Lição 5: Análise de Jogadores</strong>
+                    <p style="color: #aaa; font-size: 0.9em;">Ensine a IA a identificar ameaças e aliados</p>
+                    <span class="badge badge-warning">Médio</span>
+                </div>
+                
+                <button onclick="analisarTudo()" class="btn-success" style="width: 100%; margin-top: 15px;">
+                    🧠 ANALISAR TUDO AGORA
+                </button>
+            </div>
+        </div>
+        
+        <!-- LOGS EM TEMPO REAL -->
+        <div class="card" style="margin-top: 20px;">
+            <h2 style="margin-bottom: 15px;">📋 Logs de Aprendizado</h2>
+            <div id="logs" style="max-height: 200px; overflow-y: auto; font-size: 0.8em; color: #aaa;">
+                <p>⏳ Aguardando dados...</p>
+            </div>
+        </div>
     </div>
     
     <script>
         const API = 'https://cerebro-ia-mh3k.onrender.com';
-        setInterval(async () => {
-            const r = await fetch(API + '/api/dados');
-            const d = await r.json();
-            document.getElementById('online').textContent = d.estatisticas.usersOnline;
-            document.getElementById('scans').textContent = d.antiCheat.totalScans;
-        }, 3000);
+        
+        // ============================================
+        // CHAT COM IA
+        // ============================================
+        async function enviarMensagem(msg) {
+            const input = document.getElementById('chatInput');
+            const pergunta = msg || input.value;
+            if (!pergunta) return;
+            
+            if (!msg) input.value = '';
+            
+            // Mostra mensagem do usuário
+            adicionarMensagem(pergunta, 'user');
+            
+            try {
+                const r = await fetch(API + '/api/ia/chat', {
+                    method: 'POST',
+                    headers: {'Content-Type': 'application/json'},
+                    body: JSON.stringify({ pergunta: pergunta })
+                });
+                
+                const d = await r.json();
+                const resposta = d.resposta?.respostaBruta || 
+                                 d.resposta?.sugestoes?.join('\n') || 
+                                 JSON.stringify(d.resposta, null, 2) ||
+                                 '🤔 Não entendi, pode repetir?';
+                
+                adicionarMensagem(resposta, 'ia');
+            } catch (e) {
+                adicionarMensagem('❌ Erro ao conectar com a IA', 'ia');
+            }
+        }
+        
+        function adicionarMensagem(texto, tipo) {
+            const chatBox = document.getElementById('chatBox');
+            const div = document.createElement('div');
+            div.className = 'message ' + (tipo === 'user' ? 'user-msg' : 'ia-msg');
+            div.innerHTML = `<strong>${tipo === 'user' ? '👤 Você' : '🧠 Professora IA'}:</strong><br>${texto}`;
+            chatBox.appendChild(div);
+            chatBox.scrollTop = chatBox.scrollHeight;
+        }
+        
+        function enviarRapido(msg) {
+            enviarMensagem(msg);
+        }
+        
+        // ============================================
+        // LIÇÕES PRONTAS
+        // ============================================
+        const licoes = {
+            'lição1': `📊 LIÇÃO 1: Dados de Combate
+        Ensine a IA a analisar estatísticas de PvP.
+        Aqui estão meus dados atuais:
+        - Kills totais: 150
+        - Mortes: 30
+        - Winrate: 83%
+        - Headshots: 45%
+        - Arma favorita: Rifle
+        
+        Analise esses dados e sugira como posso melhorar minha performance!`,
+            
+            'lição2': `🛡️ LIÇÃO 2: Detecção de Anti-Cheat
+        Ensine a IA a proteger contra bans.
+        Aqui está o que encontrei no servidor:
+        - Módulo "AntiExploit" detectado
+        - Script "PlayerValidator" ativo
+        - RemoteEvent "ReportPlayer" encontrado
+        
+        Como devo configurar meu script para evitar detecção?`,
+            
+            'lição3': `🎯 LIÇÃO 3: Otimização de Aimbot
+        Ensine a IA sobre as melhores configurações:
+        - FOV atual: 100
+        - Suavização: 3
+        - Wall Check: Ativo
+        - Team Check: Ativo
+        - Mapa: Arsenal
+        
+        Qual a configuração ideal para máxima precisão sem ser detectado?`,
+            
+            'lição4': `🧬 LIÇÃO 4: DNA da Oracle
+        Ensine a IA sobre Q-Learning.
+        Minha Oracle tem:
+        - 306 estados na QTable
+        - Taxa de aprendizado: 0.3
+        - Fator de desconto: 0.9
+        - Taxa de exploração: 0.2
+        
+        Como posso acelerar o aprendizado da minha IA?`,
+            
+            'lição5': `👥 LIÇÃO 5: Análise de Jogadores
+        Ensine a IA a identificar padrões.
+        No servidor atual:
+        - 12 jogadores online
+        - 3 no meu time
+        - 2 jogadores nível 100+ (possíveis mods?)
+        - 1 jogador com nome "Admin_Test"
+        
+        Devo me preocupar? Como devo ajustar minhas configurações?`
+        };
+        
+        function enviarLicao(licao) {
+            if (licoes[licao]) {
+                enviarMensagem(licoes[licao]);
+            }
+        }
+        
+        // ============================================
+        // ANÁLISE COMPLETA
+        // ============================================
+        async function analisarTudo() {
+            adicionarMensagem('🔍 Solicitando análise completa do sistema...', 'user');
+            
+            try {
+                const r = await fetch(API + '/api/ia/analisar', { method: 'POST' });
+                const d = await r.json();
+                adicionarMensagem('📊 Resultado da análise:\n' + JSON.stringify(d, null, 2), 'ia');
+            } catch (e) {
+                adicionarMensagem('❌ Erro na análise', 'ia');
+            }
+        }
+        
+        // ============================================
+        // ATUALIZAÇÃO EM TEMPO REAL
+        // ============================================
+        async function atualizarDados() {
+            try {
+                const r = await fetch(API + '/api/dados');
+                const d = await r.json();
+                
+                // Stats
+                document.getElementById('online').textContent = d.estatisticas?.usersOnline || 0;
+                document.getElementById('scans').textContent = d.antiCheat?.totalScans || 0;
+                
+                // Estados (soma de todos usuários)
+                let totalEstados = 0;
+                d.usuarios?.forEach(u => {
+                    totalEstados += u.ia?.estados || 0;
+                });
+                document.getElementById('estados').textContent = totalEstados;
+                
+                // Risco
+                const risco = d.antiCheat?.ultimoAlerta?.risco || 'BAIXO';
+                const riscoEl = document.getElementById('risco');
+                riscoEl.textContent = risco;
+                riscoEl.className = 'stat risk-' + risco.toLowerCase();
+                
+                // Logs
+                const logsEl = document.getElementById('logs');
+                if (d.antiCheat?.logs?.length > 0) {
+                    logsEl.innerHTML = d.antiCheat.logs.slice(-5).reverse().map(log => 
+                        `<p>🔍 [${new Date(log.timestamp).toLocaleTimeString()}] ` +
+                        `Risco: <span class="risk-${log.riskLevel?.toLowerCase()}">${log.riskLevel}</span> | ` +
+                        `Suspeitos: ${log.suspeitos?.length || 0}</p>`
+                    ).join('');
+                }
+            } catch (e) {
+                console.log('Atualizando...');
+            }
+        }
+        
+        // Atualiza a cada 3 segundos
+        setInterval(atualizarDados, 3000);
+        atualizarDados();
+        
+        console.log('🧠 Escola IA iniciada!');
     </script>
 </body>
 </html>
