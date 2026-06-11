@@ -42,9 +42,24 @@ class CerebroIA {
                 messages: [
                     { 
                         role: 'system', 
-                        content: 'Você é um sistema de segurança para scripts Roblox. Responda SEMPRE em JSON válido com: {"risco":"BAIXO/MÉDIO/ALTO/CRÍTICO","sugestoes":[],"alerta":null,"configuracoes":{}}'
+                        content: `Você é uma IA especialista em segurança de scripts Roblox.
+                        
+                        REGRAS:
+                        1. SEMPRE analise os dados recebidos
+                        2. Se não houver dados, peça informações
+                        3. Responda em português, de forma direta
+                        4. Use EMOJIS para indicar nível de risco
+                        5. Dê 2-3 sugestões práticas
+                        
+                        FORMATO DE RESPOSTA:
+                        🟢/🟡/🔴 RISCO: [Baixo/Médio/Alto]
+                        📊 ANÁLISE: [uma frase]
+                        💡 SUGESTÕES:
+                        • [dica 1]
+                        • [dica 2]
+                        🚨 ALERTA: [se houver perigo]`
                     },
-                    { role: 'user', content: `ANÁLISE: ${prompt}\nDADOS: ${JSON.stringify(contextoCompleto)}` }
+                    { role: 'user', content: prompt }
                 ],
                 temperature: 0.7,
                 max_tokens: 500
@@ -56,25 +71,10 @@ class CerebroIA {
             });
 
             const resposta = response.data.choices[0].message.content;
-            const jsonMatch = resposta.match(/\{[\s\S]*\}/);
-            
-            if (jsonMatch) {
-                const resultado = JSON.parse(jsonMatch[0]);
-                this.contexto.push({ prompt, resultado, timestamp: Date.now() });
-                if (this.contexto.length > 50) this.contexto.shift();
-                return resultado;
-            }
-            
-            return { erro: "Formato inválido", respostaBruta: resposta };
+            return resposta;
         } catch (e) {
             console.error('Erro Groq:', e.message);
-            return { 
-                offline: true, 
-                risco: "DESCONHECIDO",
-                sugestoes: ["IA offline - usando configurações padrão"],
-                alerta: null,
-                configuracoes: { fov: 80, aimbot: true }
-            };
+            return "IA offline - usando configurações padrão";
         }
     }
 }
@@ -180,7 +180,7 @@ app.post('/api/ia/analisar', async (req, res) => {
     const analise = await cerebro.pensar(
         "Faça uma análise completa de segurança do sistema"
     );
-    res.json(analise);
+    res.json({ analise });
 });
 
 // Rota de teste
@@ -244,7 +244,22 @@ setInterval(() => {
         Object.values(database.usuarios).filter(u => u.online).length;
 }, 30000);
 
+// ============================================
+// ⏰ ANTI-SONO - Mantém o Render acordado 24h
+// ============================================
+setInterval(async () => {
+    try {
+        await axios.get('https://cerebro-ia-mh3k.onrender.com/api/testar');
+        console.log('⏰ Auto-ping para manter acordado');
+    } catch (e) {
+        console.log('⏰ Ping falhou, mas tudo bem');
+    }
+}, 300000); // A cada 5 minutos
+
+// ============================================
+// 🚀 INICIAR SERVIDOR
+// ============================================
 const PORT = process.env.PORT || 3000;
 app.listen(PORT, () => {
-    console.log('🧠 Cérebro IA Anti-Cheat rodando na porta ' + PORT);
+    console.log('🧠 Cérebro IA rodando na porta ' + PORT);
 });
