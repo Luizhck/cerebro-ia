@@ -62,11 +62,52 @@ class CerebroIA {
 
     async pensar(prompt, dados = {}) {
         try {
+            // Pega TODOS os suspeitos únicos já encontrados
+            const todosSuspeitos = [];
+            const scansComSuspeitos = [];
+            
+            database.antiCheatLogs.forEach(s => {
+                if (s.suspeitos && s.suspeitos.length > 0) {
+                    scansComSuspeitos.push({
+                        suspeitos: s.suspeitos,
+                        risco: s.riskLevel,
+                        total: s.totalSuspeitos,
+                        data: new Date(s.timestamp).toLocaleString('pt-BR')
+                    });
+                    s.suspeitos.forEach(nome => {
+                        if (!todosSuspeitos.includes(nome)) {
+                            todosSuspeitos.push(nome);
+                        }
+                    });
+                }
+            });
+            
+            // Conta frequência de cada suspeito
+            const frequenciaSuspeitos = {};
+            database.antiCheatLogs.forEach(s => {
+                if (s.suspeitos) {
+                    s.suspeitos.forEach(nome => {
+                        frequenciaSuspeitos[nome] = (frequenciaSuspeitos[nome] || 0) + 1;
+                    });
+                }
+            });
+            
+            // Ordena por mais frequente
+            const suspeitosOrdenados = Object.entries(frequenciaSuspeitos)
+                .sort((a, b) => b[1] - a[1])
+                .slice(0, 20)
+                .map(([nome, count]) => ({ nome, vezes: count }));
+
             // Dados REAIS do sistema
             const dadosReais = {
-                totalUsuarios: Object.keys(database.usuarios).length,
-                onlineAgora: Object.values(database.usuarios).filter(u => u.online).length,
-                totalScans: database.antiCheatLogs.length,
+                resumo: {
+                    totalUsuarios: Object.keys(database.usuarios).length,
+                    onlineAgora: Object.values(database.usuarios).filter(u => u.online).length,
+                    totalScans: database.antiCheatLogs.length,
+                    scansComSuspeitos: scansComSuspeitos.length
+                },
+                suspeitosDetectados: suspeitosOrdenados,
+                ultimosScansSuspeitos: scansComSuspeitos.slice(-10).reverse(),
                 usuarios: Object.values(database.usuarios).slice(0, 20).map(u => ({
                     nome: u.nome,
                     userId: u.userId,
@@ -86,31 +127,34 @@ class CerebroIA {
                         
                         REGRAS ABSOLUTAS:
                         1. Você NÃO pode inventar números, nomes ou dados
-                        2. Você NÃO pode sugerir código ou comandos
-                        3. Você NÃO pode dar exemplos fictícios
-                        4. Você SÓ analisa os DADOS REAIS fornecidos abaixo
-                        5. Se a informação não estiver nos dados, diga "Não tenho esse dado"
-                        6. Responda em português, de forma direta
-                        7. Use EMOJIS para indicar nível de risco
+                        2. Você NÃO pode mencionar VAC, EasyAntiCheat, BattlEye (são de PC, não Roblox)
+                        3. Você NÃO pode sugerir código ou comandos
+                        4. Você NÃO pode dar exemplos fictícios
+                        5. Você SÓ analisa os DADOS REAIS fornecidos abaixo
+                        6. Se a informação não estiver nos dados, diga "Não tenho esse dado"
+                        7. Responda em português, de forma direta
+                        8. Use EMOJIS para indicar nível de risco
+                        9. Lembre-se: ESTAMOS NO ROBLOX, não em jogos de PC
                         
                         FORMATO:
                         🟢/🟡/🔴 RISCO: [nível]
-                        📊 DADOS REAIS: [análise]
-                        💡 SUGESTÃO: [recomendação baseada nos dados reais]`
+                        📊 DADOS REAIS: [análise baseada APENAS nos dados fornecidos]
+                        💡 SUGESTÃO: [recomendação prática]`
                     },
                     { 
                         role: 'user', 
-                        content: `DADOS REAIS DO SISTEMA (USE APENAS ISTO):
+                        content: `DADOS REAIS DO SISTEMA ROBLOX (USE APENAS ISTO):
                         
                         ${JSON.stringify(dadosReais, null, 2)}
                         
                         PERGUNTA DO USUÁRIO: ${prompt}
                         
                         IMPORTANTE: Analise APENAS os dados acima.
+                        NÃO invente anti-cheats de PC.
                         Se perguntarem algo que não está nos dados, diga que não tem essa informação.`
                     }
                 ],
-                temperature: 0.5,
+                temperature: 0.3,
                 max_tokens: 400
             }, {
                 headers: {
@@ -167,8 +211,8 @@ app.post('/api/telemetria', async (req, res) => {
     if (tipo === 'anti_cheat_scan') {
         const scanData = { userId, timestamp: Date.now(), ...dados };
         database.antiCheatLogs.push(scanData);
-        if (database.antiCheatLogs.length > 1000) {
-            database.antiCheatLogs = database.antiCheatLogs.slice(-1000);
+        if (database.antiCheatLogs.length > 2000) {
+            database.antiCheatLogs = database.antiCheatLogs.slice(-2000);
         }
         if (!database.usuarios[userId].scans) database.usuarios[userId].scans = [];
         database.usuarios[userId].scans.push(scanData);
@@ -187,8 +231,21 @@ app.get('/api/dados', (req, res) => {
     database.estatisticas.usersOnline = 
         Object.values(database.usuarios).filter(u => u.online).length;
     
+    // Suspeitos únicos
+    const todosSuspeitos = [];
+    database.antiCheatLogs.forEach(s => {
+        if (s.suspeitos) {
+            s.suspeitos.forEach(nome => {
+                if (!todosSuspeitos.includes(nome)) {
+                    todosSuspeitos.push(nome);
+                }
+            });
+        }
+    });
+    
     res.json({
         estatisticas: database.estatisticas,
+        suspeitosUnicos: todosSuspeitos,
         usuarios: Object.values(database.usuarios).map(u => ({
             nome: u.nome,
             userId: u.userId,
