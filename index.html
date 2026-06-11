@@ -1,0 +1,28 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Painel LRMODS</title>
+    <style>
+        body { background: #0a0a0a; color: #fff; font-family: monospace; padding: 20px; }
+        .card { background: #1a1a2e; padding: 20px; border-radius: 10px; margin: 10px 0; }
+        .stat { color: #00ff88; font-size: 2em; }
+    </style>
+</head>
+<body>
+    <h1>🧠 Painel LRMODS</h1>
+    <div class="card">
+        <p>Online: <span class="stat" id="online">0</span></p>
+        <p>Scans Anti-Cheat: <span id="scans">0</span></p>
+    </div>
+    
+    <script>
+        const API = 'https://cerebro-ia-mh3k.onrender.com';
+        setInterval(async () => {
+            const r = await fetch(API + '/api/dados');
+            const d = await r.json();
+            document.getElementById('online').textContent = d.estatisticas.usersOnline;
+            document.getElementById('scans').textContent = d.antiCheat.totalScans;
+        }, 3000);
+    </script>
+</body>
+</html>
