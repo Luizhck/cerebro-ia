@@ -6,30 +6,25 @@ const app = express();
 app.use(cors());
 app.use(express.json());
 
-// Configuração Gemini (GRÁTIS)
-const GEMINI_KEY = process.env.GEMINI_KEY || 'AIzaSy...';
-const GEMINI_URL = 'https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent';
+const GROQ_KEY = process.env.GROQ_KEY;
+const GROQ_URL = 'https://api.groq.com/openai/v1/chat/completions';
 
-// Banco de dados simples
 let database = {
     usuarios: {},
     estatisticas: {
-        totalKills: 0,
-        totalDeaths: 0,
-        totalEngagements: 0,
         usersOnline: 0,
         globalWinrate: 0
     },
     historico: [],
+    antiCheatLogs: [],
     configuracoes: {}
 };
 
 // ============================================
-// 🧠 CÉREBRO GEMINI
+// 🧠 CÉREBRO IA (GROQ)
 // ============================================
 class CerebroIA {
     constructor() {
-        this.memoria = {};
         this.contexto = [];
     }
 
@@ -37,47 +32,49 @@ class CerebroIA {
         try {
             const contextoCompleto = {
                 estatisticas: database.estatisticas,
-                usuariosOnline: Object.values(database.usuarios).filter(u => u.online),
-                historicoRecente: database.historico.slice(-10),
+                usuariosOnline: Object.values(database.usuarios).filter(u => u.online).length,
+                antiCheatDetectado: database.antiCheatLogs.slice(-5),
                 ...dados
             };
 
-            const response = await axios.post(
-                `${GEMINI_URL}?key=${GEMINI_KEY}`,
-                {
-                    contents: [{
-                        parts: [{
-                            text: `Você é o cérebro central de um sistema de scripts PvP para Roblox.
-                            
-                            CONTEXTO ATUAL:
-                            ${JSON.stringify(contextoCompleto, null, 2)}
-                            
-                            TAREFA: ${prompt}
-                            
-                            Responda APENAS em JSON válido.`
-                        }]
-                    }],
-                    generationConfig: {
-                        temperature: 0.7,
-                        maxOutputTokens: 500
-                    }
+            const response = await axios.post(GROQ_URL, {
+                model: 'llama-3.1-8b-instant',
+                messages: [
+                    { 
+                        role: 'system', 
+                        content: 'Você é um sistema de segurança para scripts Roblox. Responda SEMPRE em JSON válido com: {"risco":"BAIXO/MÉDIO/ALTO/CRÍTICO","sugestoes":[],"alerta":null,"configuracoes":{}}'
+                    },
+                    { role: 'user', content: `ANÁLISE: ${prompt}\nDADOS: ${JSON.stringify(contextoCompleto)}` }
+                ],
+                temperature: 0.7,
+                max_tokens: 500
+            }, {
+                headers: {
+                    'Authorization': `Bearer ${GROQ_KEY}`,
+                    'Content-Type': 'application/json'
                 }
-            );
+            });
 
-            const resposta = response.data.candidates[0].content.parts[0].text;
+            const resposta = response.data.choices[0].message.content;
             const jsonMatch = resposta.match(/\{[\s\S]*\}/);
             
             if (jsonMatch) {
                 const resultado = JSON.parse(jsonMatch[0]);
                 this.contexto.push({ prompt, resultado, timestamp: Date.now() });
-                if (this.contexto.length > 100) this.contexto.shift();
+                if (this.contexto.length > 50) this.contexto.shift();
                 return resultado;
             }
             
-            return { erro: "Formato inválido da IA" };
+            return { erro: "Formato inválido", respostaBruta: resposta };
         } catch (e) {
-            console.error('Erro Gemini:', e.message);
-            return { offline: true, mensagem: "IA offline - usando cache local" };
+            console.error('Erro Groq:', e.message);
+            return { 
+                offline: true, 
+                risco: "DESCONHECIDO",
+                sugestoes: ["IA offline - usando configurações padrão"],
+                alerta: null,
+                configuracoes: { fov: 80, aimbot: true }
+            };
         }
     }
 }
@@ -88,16 +85,15 @@ const cerebro = new CerebroIA();
 // 📡 API ENDPOINTS
 // ============================================
 
-// Registro de usuário (vem do Roblox)
+// Registro de usuário
 app.post('/api/registrar', (req, res) => {
     const { userId, nome, placeId, serverId } = req.body;
     
     if (!database.usuarios[userId]) {
         database.usuarios[userId] = {
-            nome,
-            userId,
+            nome, userId,
             firstSeen: Date.now(),
-            historicoPartidas: []
+            scans: []
         };
     }
     
@@ -109,38 +105,40 @@ app.post('/api/registrar', (req, res) => {
     database.estatisticas.usersOnline = 
         Object.values(database.usuarios).filter(u => u.online).length;
     
-    res.json({ sucesso: true, mensagem: "Registrado no cérebro central" });
+    res.json({ sucesso: true });
 });
 
-// Recebe dados de telemetria (vem do Roblox)
+// Telemetria (incluindo scans anti-cheat)
 app.post('/api/telemetria', async (req, res) => {
-    const { userId, ia, config, performance } = req.body;
+    const { userId, tipo, dados } = req.body;
     
-    if (database.usuarios[userId]) {
-        database.usuarios[userId].ia = ia;
-        database.usuarios[userId].config = config;
-        database.usuarios[userId].performance = performance;
-        database.usuarios[userId].lastSeen = Date.now();
+    if (!database.usuarios[userId]) {
+        database.usuarios[userId] = { online: true, lastSeen: Date.now() };
     }
     
-    database.estatisticas.totalEngagements += ia.engajamentos || 0;
-    database.estatisticas.globalWinrate = database.estatisticas.totalEngagements > 0 ?
-        (ia.sucessos || 0) / database.estatisticas.totalEngagements * 100 : 0;
+    database.usuarios[userId].lastSeen = Date.now();
     
-    database.historico.push({
-        userId,
-        timestamp: Date.now(),
-        ia,
-        config
-    });
-    
-    if (database.historico.length > 1000) database.historico.shift();
-    
-    if (database.historico.length % 50 === 0) {
-        const analise = await cerebro.pensar(
-            "Analise os dados recentes e sugira otimizações globais"
-        );
-        database.configuracoes.sugestoesIA = analise;
+    if (tipo === 'anti_cheat_scan') {
+        database.antiCheatLogs.push({
+            userId,
+            timestamp: Date.now(),
+            ...dados
+        });
+        
+        if (database.antiCheatLogs.length > 500) {
+            database.antiCheatLogs.shift();
+        }
+        
+        if (dados.riskLevel === 'ALTO' || dados.riskLevel === 'CRÍTICO') {
+            const analise = await cerebro.pensar(
+                `ALERTA DE SEGURANÇA! Risco: ${dados.riskLevel}`,
+                { scanData: dados }
+            );
+            
+            database.configuracoes.ultimoAlerta = analise;
+            res.json({ sucesso: true, analise });
+            return;
+        }
     }
     
     res.json({ sucesso: true });
@@ -162,28 +160,69 @@ app.get('/api/dados', (req, res) => {
     res.json({
         estatisticas: database.estatisticas,
         usuarios: Object.values(database.usuarios),
-        sugestoesIA: database.configuracoes.sugestoesIA,
-        timestamp: agora
+        antiCheat: {
+            logs: database.antiCheatLogs.slice(-20),
+            ultimoAlerta: database.configuracoes.ultimoAlerta,
+            totalScans: database.antiCheatLogs.length
+        }
     });
 });
 
-// Chat com IA (vem do painel)
+// Chat com IA
 app.post('/api/ia/chat', async (req, res) => {
     const { pergunta } = req.body;
-    const resposta = await cerebro.pensar(
-        `Usuário perguntou: "${pergunta}". Responda de forma útil e prática.`
-    );
+    const resposta = await cerebro.pensar(pergunta);
     res.json({ resposta });
 });
 
-// Recebe comandos do painel
+// Análise completa
+app.post('/api/ia/analisar', async (req, res) => {
+    const analise = await cerebro.pensar(
+        "Faça uma análise completa de segurança do sistema"
+    );
+    res.json(analise);
+});
+
+// Rota de teste
+app.get('/api/testar', async (req, res) => {
+    try {
+        const start = Date.now();
+        const response = await axios.post(GROQ_URL, {
+            model: 'llama-3.1-8b-instant',
+            messages: [{ role: 'user', content: 'Responda apenas: OK' }]
+        }, {
+            headers: {
+                'Authorization': `Bearer ${GROQ_KEY}`,
+                'Content-Type': 'application/json'
+            }
+        });
+        
+        res.json({
+            status: "online",
+            ia: "conectado",
+            latencia: Date.now() - start + "ms",
+            modelo: "Llama 3.1 8B (Groq)",
+            resposta: response.data.choices[0].message.content,
+            usuarios: database.estatisticas.usersOnline
+        });
+    } catch (e) {
+        res.json({
+            status: "online",
+            ia: "erro: " + e.message,
+            key: GROQ_KEY ? "configurada" : "faltando"
+        });
+    }
+});
+
+// Comandos remotos
 app.post('/api/comandos', (req, res) => {
     const { comando, valor } = req.body;
-    database.configuracoes.comandoPendente = { comando, valor, timestamp: Date.now() };
+    database.configuracoes.comandoPendente = { 
+        comando, valor, timestamp: Date.now() 
+    };
     res.json({ sucesso: true });
 });
 
-// Roblox consulta comandos
 app.get('/api/comandos/:userId', (req, res) => {
     const comando = database.configuracoes.comandoPendente;
     if (comando && Date.now() - comando.timestamp < 10000) {
@@ -193,42 +232,7 @@ app.get('/api/comandos/:userId', (req, res) => {
     }
 });
 
-// Painel solicita análise completa
-app.post('/api/ia/analisar', async (req, res) => {
-    const analise = await cerebro.pensar(
-        "Faça uma análise completa do sistema: performance, riscos, sugestões e previsões"
-    );
-    res.json(analise);
-});
-
-// Rota de teste
-app.get('/api/testar', async (req, res) => {
-    try {
-        const response = await axios.post(
-            `${GEMINI_URL}?key=${GEMINI_KEY}`,
-            {
-                contents: [{
-                    parts: [{ text: "Responda apenas: OK" }]
-                }]
-            }
-        );
-        
-        res.json({
-            status: "online",
-            gemini: "conectado",
-            resposta: response.data.candidates[0].content.parts[0].text,
-            usuarios: Object.values(database.usuarios).filter(u => u.online).length
-        });
-    } catch (e) {
-        res.json({
-            status: "online",
-            gemini: "erro: " + e.message,
-            key: GEMINI_KEY ? "configurada" : "faltando"
-        });
-    }
-});
-
-// Limpar dados offline
+// Limpeza de offline
 setInterval(() => {
     const agora = Date.now();
     for (let id in database.usuarios) {
@@ -242,5 +246,5 @@ setInterval(() => {
 
 const PORT = process.env.PORT || 3000;
 app.listen(PORT, () => {
-    console.log('🧠 Cérebro IA rodando na porta ' + PORT);
+    console.log('🧠 Cérebro IA Anti-Cheat rodando na porta ' + PORT);
 });
