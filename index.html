@@ -3,157 +3,286 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>🧠 Escola IA - LRMODS</title>
+    <title>🧠 LRMODS - IA Avançada</title>
     <style>
+        :root {
+            --bg: #0a0a0f;
+            --card: #12121a;
+            --border: #1e1e30;
+            --green: #00ff88;
+            --blue: #4488ff;
+            --red: #ff4455;
+            --yellow: #ffaa00;
+            --text: #e0e0e0;
+            --text2: #8888aa;
+        }
+
         * { margin: 0; padding: 0; box-sizing: border-box; }
-        body { 
-            background: #0a0a0a; 
-            color: #fff; 
-            font-family: 'Courier New', monospace;
-            padding: 20px;
+
+        body {
+            background: var(--bg);
+            color: var(--text);
+            font-family: 'Segoe UI', system-ui, sans-serif;
             min-height: 100vh;
-        }
-        .container { max-width: 1200px; margin: 0 auto; }
-        
-        .header {
-            background: linear-gradient(135deg, #1a1a2e, #16213e);
-            padding: 30px;
-            border-radius: 15px;
-            text-align: center;
-            margin-bottom: 20px;
-            border: 1px solid #0f3460;
-        }
-        .header h1 { font-size: 2.5em; color: #00ff88; }
-        
-        .grid {
-            display: grid;
-            grid-template-columns: 1fr 1fr;
-            gap: 20px;
-        }
-        
-        .card {
-            background: #1a1a2e;
-            padding: 20px;
-            border-radius: 10px;
-            border: 1px solid #0f3460;
-        }
-        
-        .stat { 
-            font-size: 2.5em; 
-            color: #00ff88; 
-            font-weight: bold;
-        }
-        
-        .risk-low { color: #00ff88; }
-        .risk-medium { color: #ffaa00; }
-        .risk-high { color: #ff4444; }
-        .risk-critical { color: #ff0000; animation: blink 1s infinite; }
-        
-        @keyframes blink {
-            50% { opacity: 0.5; }
-        }
-        
-        #chatBox {
-            height: 400px;
-            overflow-y: auto;
-            background: #0a0a0a;
-            padding: 15px;
-            border-radius: 8px;
-            margin-bottom: 15px;
-            border: 1px solid #0f3460;
-        }
-        
-        .message {
-            margin: 10px 0;
             padding: 10px;
-            border-radius: 8px;
-            max-width: 80%;
         }
-        
-        .user-msg {
-            background: #0f3460;
-            margin-left: auto;
-            text-align: right;
-        }
-        
-        .ia-msg {
-            background: #16213e;
-            margin-right: auto;
-            border-left: 3px solid #00ff88;
-        }
-        
-        .input-group {
+
+        .container {
+            max-width: 900px;
+            margin: 0 auto;
+            height: 100vh;
             display: flex;
-            gap: 10px;
+            flex-direction: column;
         }
-        
-        input, button {
-            padding: 12px;
-            border: 1px solid #0f3460;
-            border-radius: 8px;
-            background: #0a0a0a;
+
+        /* HEADER */
+        .header {
+            background: var(--card);
+            border: 1px solid var(--border);
+            border-radius: 16px;
+            padding: 16px 20px;
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            flex-shrink: 0;
+        }
+        .header .logo { font-size: 2em; }
+        .header h1 { 
+            font-size: 1.2em; 
+            background: linear-gradient(135deg, var(--green), #00ccff);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+        }
+        .header .status {
+            margin-left: auto;
+            display: flex;
+            gap: 16px;
+            font-size: 0.8em;
+            color: var(--text2);
+        }
+        .status span { 
+            padding: 4px 10px;
+            background: var(--border);
+            border-radius: 20px;
+            white-space: nowrap;
+        }
+        .status .online-dot {
+            width: 8px; height: 8px;
+            background: var(--green);
+            border-radius: 50%;
+            display: inline-block;
+            margin-right: 4px;
+            animation: pulse 2s infinite;
+        }
+        @keyframes pulse {
+            0%, 100% { opacity: 1; }
+            50% { opacity: 0.3; }
+        }
+
+        /* CHAT */
+        .chat-container {
+            flex: 1;
+            background: var(--card);
+            border: 1px solid var(--border);
+            border-radius: 16px;
+            margin: 10px 0;
+            display: flex;
+            flex-direction: column;
+            overflow: hidden;
+        }
+
+        .chat-header {
+            padding: 12px 20px;
+            border-bottom: 1px solid var(--border);
+            font-size: 0.85em;
+            color: var(--text2);
+            flex-shrink: 0;
+        }
+
+        .chat-messages {
+            flex: 1;
+            overflow-y: auto;
+            padding: 20px;
+            display: flex;
+            flex-direction: column;
+            gap: 16px;
+        }
+
+        .chat-messages::-webkit-scrollbar {
+            width: 4px;
+        }
+        .chat-messages::-webkit-scrollbar-track {
+            background: transparent;
+        }
+        .chat-messages::-webkit-scrollbar-thumb {
+            background: var(--border);
+            border-radius: 10px;
+        }
+
+        .message {
+            max-width: 85%;
+            animation: fadeIn 0.3s ease;
+        }
+        @keyframes fadeIn {
+            from { opacity: 0; transform: translateY(10px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+
+        .message.user {
+            align-self: flex-end;
+        }
+        .message.ia {
+            align-self: flex-start;
+        }
+
+        .message .bubble {
+            padding: 14px 18px;
+            border-radius: 18px;
+            line-height: 1.6;
+            font-size: 0.95em;
+            position: relative;
+            white-space: pre-wrap;
+            word-break: break-word;
+        }
+
+        .message.user .bubble {
+            background: var(--blue);
             color: #fff;
-            font-family: 'Courier New', monospace;
+            border-bottom-right-radius: 4px;
         }
-        
-        input { flex: 1; }
-        
-        button {
-            background: #0f3460;
+
+        .message.ia .bubble {
+            background: #1a1a2e;
+            border: 1px solid var(--border);
+            border-bottom-left-radius: 4px;
+        }
+
+        .message .copy-btn {
+            position: absolute;
+            top: 8px;
+            right: 8px;
+            background: rgba(255,255,255,0.1);
+            border: none;
+            color: #fff;
+            width: 28px;
+            height: 28px;
+            border-radius: 8px;
             cursor: pointer;
-            font-weight: bold;
-            transition: 0.3s;
+            font-size: 0.8em;
+            opacity: 0;
+            transition: opacity 0.2s;
         }
-        
-        button:hover {
-            background: #00ff88;
+        .message.ia .bubble:hover .copy-btn {
+            opacity: 1;
+        }
+        .copy-btn:hover {
+            background: rgba(255,255,255,0.2);
+        }
+        .copy-btn.copied {
+            background: var(--green);
             color: #000;
         }
-        
-        .btn-danger { background: #ff4444; }
-        .btn-danger:hover { background: #ff6666; color: #fff; }
-        
-        .btn-success { background: #00aa55; }
-        .btn-success:hover { background: #00ff88; color: #000; }
-        
-        .lesson-card {
-            background: #0a0a0a;
-            padding: 15px;
-            border-radius: 8px;
-            margin: 10px 0;
-            border: 1px solid #0f3460;
+
+        .message .sender {
+            font-size: 0.7em;
+            color: var(--text2);
+            margin-bottom: 4px;
+            padding: 0 4px;
+        }
+
+        /* INPUT */
+        .input-area {
+            padding: 16px 20px;
+            border-top: 1px solid var(--border);
+            display: flex;
+            gap: 8px;
+            flex-shrink: 0;
+        }
+        .input-area input {
+            flex: 1;
+            background: var(--bg);
+            border: 1px solid var(--border);
+            border-radius: 12px;
+            padding: 12px 16px;
+            color: #fff;
+            font-size: 0.95em;
+            outline: none;
+            transition: border 0.2s;
+        }
+        .input-area input:focus {
+            border-color: var(--blue);
+        }
+        .input-area button {
+            background: var(--blue);
+            border: none;
+            color: #fff;
+            padding: 12px 20px;
+            border-radius: 12px;
             cursor: pointer;
-            transition: 0.3s;
+            font-size: 0.95em;
+            font-weight: 600;
+            transition: 0.2s;
+            white-space: nowrap;
         }
-        
-        .lesson-card:hover {
-            border-color: #00ff88;
-            background: #0f3460;
+        .input-area button:hover {
+            background: #5599ff;
+            transform: scale(1.02);
         }
-        
-        .badge {
-            display: inline-block;
-            padding: 3px 8px;
-            border-radius: 4px;
-            font-size: 0.8em;
-            margin: 2px;
+
+        /* QUICK BUTTONS */
+        .quick-buttons {
+            display: flex;
+            gap: 6px;
+            padding: 8px 20px 0;
+            flex-wrap: wrap;
         }
-        
-        .badge-success { background: #00aa55; }
-        .badge-warning { background: #ffaa00; color: #000; }
-        .badge-danger { background: #ff4444; }
-        
-        pre {
-            background: #000;
-            padding: 10px;
-            border-radius: 5px;
-            overflow-x: auto;
-            margin: 10px 0;
-            border-left: 3px solid #00ff88;
+        .quick-btn {
+            background: var(--border);
+            border: none;
+            color: var(--text2);
+            padding: 6px 14px;
+            border-radius: 20px;
+            cursor: pointer;
+            font-size: 0.75em;
+            transition: 0.2s;
+            white-space: nowrap;
         }
-        
-        @media (max-width: 768px) {
-            .grid { grid-template-columns: 1fr; }
+        .quick-btn:hover {
+            background: var(--blue);
+            color: #fff;
+        }
+
+        /* TOAST */
+        .toast {
+            position: fixed;
+            bottom: 20px;
+            left: 50%;
+            transform: translateX(-50%);
+            background: var(--green);
+            color: #000;
+            padding: 10px 20px;
+            border-radius: 20px;
+            font-weight: 600;
+            font-size: 0.85em;
+            z-index: 99;
+            animation: toastIn 0.3s ease, toastOut 0.3s ease 2s forwards;
+        }
+        @keyframes toastIn {
+            from { opacity: 0; transform: translateX(-50%) translateY(20px); }
+            to { opacity: 1; transform: translateX(-50%) translateY(0); }
+        }
+        @keyframes toastOut {
+            from { opacity: 1; }
+            to { opacity: 0; }
+        }
+
+        /* MOBILE */
+        @media (max-width: 600px) {
+            .header h1 { font-size: 1em; }
+            .status { gap: 8px; font-size: 0.7em; }
+            .message { max-width: 92%; }
+            .quick-buttons { padding: 6px 12px 0; }
+            .input-area { padding: 12px; }
         }
     </style>
 </head>
@@ -161,276 +290,206 @@
     <div class="container">
         <!-- HEADER -->
         <div class="header">
-            <h1>🧠 Escola IA - LRMODS</h1>
-            <p style="color: #aaa;">Ensine sua Inteligência Artificial a ser a melhor!</p>
-        </div>
-        
-        <!-- STATS RÁPIDOS -->
-        <div style="display: grid; grid-template-columns: repeat(4, 1fr); gap: 10px; margin-bottom: 20px;">
-            <div class="card" style="text-align: center;">
-                <div style="color: #aaa; font-size: 0.8em;">ONLINE</div>
-                <div class="stat" id="online">0</div>
+            <div class="logo">🧠</div>
+            <div>
+                <h1>LRMODS IA</h1>
+                <div style="font-size:0.7em;color:var(--text2)">Especialista em Segurança</div>
             </div>
-            <div class="card" style="text-align: center;">
-                <div style="color: #aaa; font-size: 0.8em;">ESTADOS IA</div>
-                <div class="stat" id="estados">0</div>
-            </div>
-            <div class="card" style="text-align: center;">
-                <div style="color: #aaa; font-size: 0.8em;">SCANS</div>
-                <div class="stat" id="scans">0</div>
-            </div>
-            <div class="card" style="text-align: center;">
-                <div style="color: #aaa; font-size: 0.8em;">RISCO</div>
-                <div class="stat" id="risco">BAIXO</div>
+            <div class="status">
+                <span><span class="online-dot"></span>Online: <b id="online">0</b></span>
+                <span>🔍 Scans: <b id="scans">0</b></span>
+                <span id="riscoBadge" style="background:#00ff8822;color:var(--green)">🟢 BAIXO</span>
             </div>
         </div>
-        
-        <div class="grid">
-            <!-- CHAT COM IA -->
-            <div class="card" style="grid-column: span 1;">
-                <h2 style="margin-bottom: 15px;">💬 Converse com a IA</h2>
-                <div id="chatBox">
-                    <div class="message ia-msg">
-                        <strong>🧠 Professora IA:</strong><br>
-                        Olá! Sou sua professora de IA! Você pode me ensinar sobre:
-                        <br><br>
-                        📊 <b>Dados de combate</b> - Me conte sobre kills, mortes, winrate<br>
-                        🛡️ <b>Anti-cheat</b> - Me avise sobre arquivos suspeitos<br>
-                        🎯 <b>Configurações</b> - Pergunte qual o melhor FOV<br>
-                        ⚠️ <b>Riscos</b> - Me alerte sobre possíveis bans<br>
-                        <br>
-                        <i>Digite sua mensagem abaixo para começar!</i>
+
+        <!-- CHAT -->
+        <div class="chat-container">
+            <div class="chat-header">
+                💬 Conversa com a IA • <span id="msgCount">0</span> mensagens
+            </div>
+            <div class="chat-messages" id="chatBox">
+                <div class="message ia">
+                    <div class="sender">🧠 Professora IA</div>
+                    <div class="bubble">
+                        Olá! Sou sua assistente especializada em segurança de jogos.<br><br>
+                        🛡️ Posso analisar anti-cheats<br>
+                        🎯 Sugerir configurações seguras<br>
+                        🔍 Explicar métodos de detecção<br>
+                        💡 Dar dicas de evasão<br><br>
+                        <i>Use os botões abaixo ou digite sua pergunta!</i>
                     </div>
                 </div>
-                <div class="input-group">
-                    <input type="text" id="chatInput" placeholder="Ensine algo para a IA..." onkeypress="if(event.key==='Enter') enviarMensagem()">
-                    <button onclick="enviarMensagem()">📤 Enviar</button>
-                </div>
-                <div style="margin-top: 10px; display: flex; gap: 5px; flex-wrap: wrap;">
-                    <button onclick="enviarRapido('Qual o melhor FOV para esse servidor?')" style="font-size: 0.8em;">🎯 FOV</button>
-                    <button onclick="enviarRapido('Analise os riscos de ban agora')" style="font-size: 0.8em;">🛡️ Risco</button>
-                    <button onclick="enviarRapido('Como melhorar minha mira?')" style="font-size: 0.8em;">🎯 Mira</button>
-                    <button onclick="enviarRapido('Detecte padrões suspeitos no servidor')" style="font-size: 0.8em;">🔍 Scan</button>
-                </div>
             </div>
-            
-            <!-- LIÇÕES E TREINAMENTO -->
-            <div class="card" style="grid-column: span 1;">
-                <h2 style="margin-bottom: 15px;">📚 Lições para Ensinar a IA</h2>
-                
-                <div class="lesson-card" onclick="enviarLicao('lição1')">
-                    <strong>📊 Lição 1: Dados de Combate</strong>
-                    <p style="color: #aaa; font-size: 0.9em;">Ensine a IA a analisar winrate, K/D, e padrões de luta</p>
-                    <span class="badge badge-success">Fácil</span>
-                </div>
-                
-                <div class="lesson-card" onclick="enviarLicao('lição2')">
-                    <strong>🛡️ Lição 2: Detecção de Anti-Cheat</strong>
-                    <p style="color: #aaa; font-size: 0.9em;">Mostre como identificar armadilhas e armadilhas de ban</p>
-                    <span class="badge badge-warning">Médio</span>
-                </div>
-                
-                <div class="lesson-card" onclick="enviarLicao('lição3')">
-                    <strong>🎯 Lição 3: Otimização de Aimbot</strong>
-                    <p style="color: #aaa; font-size: 0.9em;">Ensine sobre FOV, suavização, e wall check</p>
-                    <span class="badge badge-success">Fácil</span>
-                </div>
-                
-                <div class="lesson-card" onclick="enviarLicao('lição4')">
-                    <strong>🧬 Lição 4: DNA da Oracle</strong>
-                    <p style="color: #aaa; font-size: 0.9em;">Explique como funciona o sistema de Q-Learning</p>
-                    <span class="badge badge-danger">Avançado</span>
-                </div>
-                
-                <div class="lesson-card" onclick="enviarLicao('lição5')">
-                    <strong>👥 Lição 5: Análise de Jogadores</strong>
-                    <p style="color: #aaa; font-size: 0.9em;">Ensine a IA a identificar ameaças e aliados</p>
-                    <span class="badge badge-warning">Médio</span>
-                </div>
-                
-                <button onclick="analisarTudo()" class="btn-success" style="width: 100%; margin-top: 15px;">
-                    🧠 ANALISAR TUDO AGORA
-                </button>
+
+            <!-- BOTÕES RÁPIDOS -->
+            <div class="quick-buttons">
+                <button class="quick-btn" onclick="enviar('Como os anti-cheats detectam Aimbot?')">🎯 Aimbot</button>
+                <button class="quick-btn" onclick="enviar('Qual FOV seguro para este jogo?')">📐 FOV</button>
+                <button class="quick-btn" onclick="enviar('Quais padrões ativam alertas?')">⚠️ Alertas</button>
+                <button class="quick-btn" onclick="enviar('Como evitar detecção de memória?')">🧠 Memória</button>
+                <button class="quick-btn" onclick="enviar('Métodos anti-cheat mais comuns?')">🔍 Métodos</button>
+                <button class="quick-btn" onclick="enviar('Dicas para script indetectável')">🛡️ Indetectável</button>
             </div>
-        </div>
-        
-        <!-- LOGS EM TEMPO REAL -->
-        <div class="card" style="margin-top: 20px;">
-            <h2 style="margin-bottom: 15px;">📋 Logs de Aprendizado</h2>
-            <div id="logs" style="max-height: 200px; overflow-y: auto; font-size: 0.8em; color: #aaa;">
-                <p>⏳ Aguardando dados...</p>
+
+            <!-- INPUT -->
+            <div class="input-area">
+                <input type="text" id="chatInput" placeholder="Digite sua mensagem..." onkeypress="if(event.key==='Enter') enviar()">
+                <button onclick="enviar()">📤 Enviar</button>
             </div>
         </div>
     </div>
-    
+
+    <!-- TOAST -->
+    <div id="toast" class="toast" style="display:none;"></div>
+
     <script>
         const API = 'https://cerebro-ia-mh3k.onrender.com';
-        
+        let msgCount = 0;
+
         // ============================================
-        // CHAT COM IA
+        // COPIAR TEXTO
         // ============================================
-        async function enviarMensagem(msg) {
+        function copiarTexto(botao) {
+            const bubble = botao.parentElement;
+            const texto = bubble.innerText.replace('📋', '').trim();
+            
+            navigator.clipboard.writeText(texto).then(() => {
+                botao.textContent = '✅';
+                botao.classList.add('copied');
+                mostrarToast('Copiado! 📋');
+                
+                setTimeout(() => {
+                    botao.textContent = '📋';
+                    botao.classList.remove('copied');
+                }, 2000);
+            });
+        }
+
+        function mostrarToast(msg) {
+            const toast = document.getElementById('toast');
+            toast.textContent = msg;
+            toast.style.display = 'block';
+            setTimeout(() => toast.style.display = 'none', 2500);
+        }
+
+        // ============================================
+        // ENVIAR MENSAGEM
+        // ============================================
+        async function enviar(msg) {
             const input = document.getElementById('chatInput');
-            const pergunta = msg || input.value;
+            const pergunta = msg || input.value.trim();
             if (!pergunta) return;
-            
             if (!msg) input.value = '';
-            
-            // Mostra mensagem do usuário
+
+            // Mensagem do usuário
             adicionarMensagem(pergunta, 'user');
-            
+            msgCount++;
+            document.getElementById('msgCount').textContent = msgCount;
+
+            // Loading
+            const loadingId = adicionarMensagem('⏳ Analisando...', 'ia', true);
+
             try {
                 const r = await fetch(API + '/api/ia/chat', {
                     method: 'POST',
-                    headers: {'Content-Type': 'application/json'},
+                    headers: { 'Content-Type': 'application/json' },
                     body: JSON.stringify({ pergunta: pergunta })
                 });
-                
+
                 const d = await r.json();
-                const resposta = d.resposta?.respostaBruta || 
-                                 d.resposta?.sugestoes?.join('\n') || 
-                                 JSON.stringify(d.resposta, null, 2) ||
-                                 '🤔 Não entendi, pode repetir?';
                 
+                // Remove loading
+                removerMensagem(loadingId);
+
+                let resposta = d.resposta || 'Sem resposta da IA.';
+                
+                // Formata a resposta
+                resposta = resposta
+                    .replace(/\\n/g, '\n')
+                    .replace(/\*\*/g, '')
+                    .trim();
+
                 adicionarMensagem(resposta, 'ia');
+                msgCount++;
+                document.getElementById('msgCount').textContent = msgCount;
+
             } catch (e) {
-                adicionarMensagem('❌ Erro ao conectar com a IA', 'ia');
+                removerMensagem(loadingId);
+                adicionarMensagem('❌ Erro: ' + e.message, 'ia');
             }
-        }
-        
-        function adicionarMensagem(texto, tipo) {
+
+            // Scroll
             const chatBox = document.getElementById('chatBox');
-            const div = document.createElement('div');
-            div.className = 'message ' + (tipo === 'user' ? 'user-msg' : 'ia-msg');
-            div.innerHTML = `<strong>${tipo === 'user' ? '👤 Você' : '🧠 Professora IA'}:</strong><br>${texto}`;
-            chatBox.appendChild(div);
             chatBox.scrollTop = chatBox.scrollHeight;
         }
-        
-        function enviarRapido(msg) {
-            enviarMensagem(msg);
+
+        function adicionarMensagem(texto, tipo, isTemp = false) {
+            const chatBox = document.getElementById('chatBox');
+            const div = document.createElement('div');
+            div.className = 'message ' + tipo;
+            
+            const id = 'msg-' + Date.now();
+            div.id = id;
+
+            const sender = tipo === 'user' ? '👤 Você' : '🧠 Professora IA';
+            
+            div.innerHTML = `
+                <div class="sender">${sender}</div>
+                <div class="bubble">
+                    ${texto}
+                    ${tipo === 'ia' && !isTemp ? '<button class="copy-btn" onclick="copiarTexto(this)">📋</button>' : ''}
+                </div>
+            `;
+
+            chatBox.appendChild(div);
+            chatBox.scrollTop = chatBox.scrollHeight;
+
+            return id;
         }
-        
-        // ============================================
-        // LIÇÕES PRONTAS
-        // ============================================
-        const licoes = {
-            'lição1': `📊 LIÇÃO 1: Dados de Combate
-        Ensine a IA a analisar estatísticas de PvP.
-        Aqui estão meus dados atuais:
-        - Kills totais: 150
-        - Mortes: 30
-        - Winrate: 83%
-        - Headshots: 45%
-        - Arma favorita: Rifle
-        
-        Analise esses dados e sugira como posso melhorar minha performance!`,
-            
-            'lição2': `🛡️ LIÇÃO 2: Detecção de Anti-Cheat
-        Ensine a IA a proteger contra bans.
-        Aqui está o que encontrei no servidor:
-        - Módulo "AntiExploit" detectado
-        - Script "PlayerValidator" ativo
-        - RemoteEvent "ReportPlayer" encontrado
-        
-        Como devo configurar meu script para evitar detecção?`,
-            
-            'lição3': `🎯 LIÇÃO 3: Otimização de Aimbot
-        Ensine a IA sobre as melhores configurações:
-        - FOV atual: 100
-        - Suavização: 3
-        - Wall Check: Ativo
-        - Team Check: Ativo
-        - Mapa: Arsenal
-        
-        Qual a configuração ideal para máxima precisão sem ser detectado?`,
-            
-            'lição4': `🧬 LIÇÃO 4: DNA da Oracle
-        Ensine a IA sobre Q-Learning.
-        Minha Oracle tem:
-        - 306 estados na QTable
-        - Taxa de aprendizado: 0.3
-        - Fator de desconto: 0.9
-        - Taxa de exploração: 0.2
-        
-        Como posso acelerar o aprendizado da minha IA?`,
-            
-            'lição5': `👥 LIÇÃO 5: Análise de Jogadores
-        Ensine a IA a identificar padrões.
-        No servidor atual:
-        - 12 jogadores online
-        - 3 no meu time
-        - 2 jogadores nível 100+ (possíveis mods?)
-        - 1 jogador com nome "Admin_Test"
-        
-        Devo me preocupar? Como devo ajustar minhas configurações?`
-        };
-        
-        function enviarLicao(licao) {
-            if (licoes[licao]) {
-                enviarMensagem(licoes[licao]);
-            }
+
+        function removerMensagem(id) {
+            const el = document.getElementById(id);
+            if (el) el.remove();
         }
-        
+
         // ============================================
-        // ANÁLISE COMPLETA
+        // ATUALIZAR STATS
         // ============================================
-        async function analisarTudo() {
-            adicionarMensagem('🔍 Solicitando análise completa do sistema...', 'user');
-            
-            try {
-                const r = await fetch(API + '/api/ia/analisar', { method: 'POST' });
-                const d = await r.json();
-                adicionarMensagem('📊 Resultado da análise:\n' + JSON.stringify(d, null, 2), 'ia');
-            } catch (e) {
-                adicionarMensagem('❌ Erro na análise', 'ia');
-            }
-        }
-        
-        // ============================================
-        // ATUALIZAÇÃO EM TEMPO REAL
-        // ============================================
-        async function atualizarDados() {
+        async function atualizarStats() {
             try {
                 const r = await fetch(API + '/api/dados');
                 const d = await r.json();
-                
-                // Stats
+
                 document.getElementById('online').textContent = d.estatisticas?.usersOnline || 0;
                 document.getElementById('scans').textContent = d.antiCheat?.totalScans || 0;
-                
-                // Estados (soma de todos usuários)
-                let totalEstados = 0;
-                d.usuarios?.forEach(u => {
-                    totalEstados += u.ia?.estados || 0;
-                });
-                document.getElementById('estados').textContent = totalEstados;
-                
-                // Risco
+
                 const risco = d.antiCheat?.ultimoAlerta?.risco || 'BAIXO';
-                const riscoEl = document.getElementById('risco');
-                riscoEl.textContent = risco;
-                riscoEl.className = 'stat risk-' + risco.toLowerCase();
+                const badge = document.getElementById('riscoBadge');
                 
-                // Logs
-                const logsEl = document.getElementById('logs');
-                if (d.antiCheat?.logs?.length > 0) {
-                    logsEl.innerHTML = d.antiCheat.logs.slice(-5).reverse().map(log => 
-                        `<p>🔍 [${new Date(log.timestamp).toLocaleTimeString()}] ` +
-                        `Risco: <span class="risk-${log.riskLevel?.toLowerCase()}">${log.riskLevel}</span> | ` +
-                        `Suspeitos: ${log.suspeitos?.length || 0}</p>`
-                    ).join('');
+                if (risco === 'CRÍTICO' || risco === 'ALTO') {
+                    badge.style.background = '#ff000022';
+                    badge.style.color = 'var(--red)';
+                    badge.textContent = '🔴 ' + risco;
+                } else if (risco === 'MÉDIO') {
+                    badge.style.background = '#ffaa0022';
+                    badge.style.color = 'var(--yellow)';
+                    badge.textContent = '🟡 ' + risco;
+                } else {
+                    badge.style.background = '#00ff8822';
+                    badge.style.color = 'var(--green)';
+                    badge.textContent = '🟢 ' + risco;
                 }
-            } catch (e) {
-                console.log('Atualizando...');
-            }
+            } catch (e) {}
         }
-        
-        // Atualiza a cada 3 segundos
-        setInterval(atualizarDados, 3000);
-        atualizarDados();
-        
-        console.log('🧠 Escola IA iniciada!');
+
+        // Iniciar
+        setInterval(atualizarStats, 5000);
+        atualizarStats();
+
+        // Foco no input
+        document.getElementById('chatInput').focus();
+
+        console.log('🧠 Painel LRMODS carregado!');
     </script>
 </body>
 </html>
