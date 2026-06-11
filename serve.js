@@ -1,6 +1,7 @@
 const express = require('express');
 const cors = require('cors');
 const axios = require('axios');
+const fs = require('fs');
 
 const app = express();
 app.use(cors());
@@ -8,7 +9,11 @@ app.use(express.json());
 
 const GROQ_KEY = process.env.GROQ_KEY;
 const GROQ_URL = 'https://api.groq.com/openai/v1/chat/completions';
+const DB_FILE = 'database.json';
 
+// ============================================
+// 💾 BANCO DE DADOS COM PERSISTÊNCIA
+// ============================================
 let database = {
     usuarios: {},
     estatisticas: {
@@ -19,6 +24,39 @@ let database = {
     antiCheatLogs: [],
     configuracoes: {}
 };
+
+// Carregar banco do arquivo
+try {
+    if (fs.existsSync(DB_FILE)) {
+        const data = fs.readFileSync(DB_FILE, 'utf8');
+        const carregado = JSON.parse(data);
+        database = { ...database, ...carregado };
+        console.log('📂 Banco carregado!');
+        console.log('👥 Usuários:', Object.keys(database.usuarios).length);
+        console.log('🔍 Scans:', database.antiCheatLogs.length);
+    } else {
+        console.log('📂 Novo banco criado');
+    }
+} catch (e) {
+    console.log('📂 Erro ao carregar:', e.message);
+}
+
+// Salvar banco no arquivo
+function salvarDB() {
+    try {
+        fs.writeFileSync(DB_FILE, JSON.stringify(database, null, 2));
+        console.log('💾 Banco salvo!');
+    } catch (e) {
+        console.log('💾 Erro ao salvar:', e.message);
+    }
+}
+
+// Salvar a cada 60 segundos
+setInterval(salvarDB, 60000);
+
+// Salvar ao encerrar
+process.on('SIGTERM', () => { salvarDB(); process.exit(0); });
+process.on('SIGINT', () => { salvarDB(); process.exit(0); });
 
 // ============================================
 // 🧠 CÉREBRO IA - VERSÃO SEM CENSURA
@@ -96,16 +134,18 @@ app.post('/api/registrar', (req, res) => {
     
     if (!database.usuarios[userId]) {
         database.usuarios[userId] = {
-            nome, userId,
+            nome,
+            userId,
             firstSeen: Date.now(),
-            scans: []
+            scans: [],
+            historicoPartidas: []
         };
     }
     
     database.usuarios[userId].online = true;
     database.usuarios[userId].lastSeen = Date.now();
-    database.usuarios[userId].placeId = placeId;
-    database.usuarios[userId].serverId = serverId;
+    database.usuarios[userId].placeId = placeId || database.usuarios[userId].placeId;
+    database.usuarios[userId].serverId = serverId || database.usuarios[userId].serverId;
     
     database.estatisticas.usersOnline = 
         Object.values(database.usuarios).filter(u => u.online).length;
@@ -122,27 +162,55 @@ app.post('/api/telemetria', async (req, res) => {
     }
     
     database.usuarios[userId].lastSeen = Date.now();
+    database.usuarios[userId].online = true;
     
     if (tipo === 'anti_cheat_scan') {
-        database.antiCheatLogs.push({
+        const scanData = {
             userId,
             timestamp: Date.now(),
             ...dados
-        });
+        };
         
-        if (database.antiCheatLogs.length > 500) {
-            database.antiCheatLogs.shift();
+        database.antiCheatLogs.push(scanData);
+        
+        // Mantém apenas últimos 1000 scans
+        if (database.antiCheatLogs.length > 1000) {
+            database.antiCheatLogs = database.antiCheatLogs.slice(-1000);
         }
         
+        // Salva no histórico do usuário
+        if (database.usuarios[userId]) {
+            if (!database.usuarios[userId].scans) {
+                database.usuarios[userId].scans = [];
+            }
+            database.usuarios[userId].scans.push(scanData);
+        }
+        
+        // Se risco ALTO ou CRÍTICO, analisa com IA
         if (dados.riskLevel === 'ALTO' || dados.riskLevel === 'CRÍTICO') {
             const analise = await cerebro.pensar(
-                `ALERTA DE SEGURANÇA! Risco: ${dados.riskLevel}`,
+                `ALERTA DE SEGURANÇA! Risco: ${dados.riskLevel}\n` +
+                `Suspeitos: ${dados.totalSuspeitos || 0}`,
                 { scanData: dados }
             );
             
             database.configuracoes.ultimoAlerta = analise;
             res.json({ sucesso: true, analise });
             return;
+        }
+    }
+    
+    if (tipo === 'dados_ia') {
+        if (database.usuarios[userId]) {
+            database.usuarios[userId].ia = dados.oracle || dados;
+        }
+        
+        // Atualiza estatísticas globais
+        if (dados.oracle) {
+            database.estatisticas.globalWinrate = 
+                database.estatisticas.totalEngagements > 0 ?
+                (database.estatisticas.totalSuccesses || 0) / 
+                database.estatisticas.totalEngagements * 100 : 0;
         }
     }
     
@@ -153,6 +221,7 @@ app.post('/api/telemetria', async (req, res) => {
 app.get('/api/dados', (req, res) => {
     const agora = Date.now();
     
+    // Marca offline após 60 segundos sem sinal
     for (let id in database.usuarios) {
         if (agora - database.usuarios[id].lastSeen > 60000) {
             database.usuarios[id].online = false;
@@ -162,11 +231,22 @@ app.get('/api/dados', (req, res) => {
     database.estatisticas.usersOnline = 
         Object.values(database.usuarios).filter(u => u.online).length;
     
+    // Pega últimos 20 logs
+    const logsRecentes = database.antiCheatLogs.slice(-20).reverse();
+    
     res.json({
         estatisticas: database.estatisticas,
-        usuarios: Object.values(database.usuarios),
+        usuarios: Object.values(database.usuarios).map(u => ({
+            nome: u.nome,
+            userId: u.userId,
+            online: u.online,
+            placeId: u.placeId,
+            lastSeen: u.lastSeen,
+            totalScans: u.scans?.length || 0,
+            ia: u.ia || null
+        })),
         antiCheat: {
-            logs: database.antiCheatLogs.slice(-20),
+            logs: logsRecentes,
             ultimoAlerta: database.configuracoes.ultimoAlerta,
             totalScans: database.antiCheatLogs.length
         }
@@ -176,6 +256,11 @@ app.get('/api/dados', (req, res) => {
 // Chat com IA
 app.post('/api/ia/chat', async (req, res) => {
     const { pergunta } = req.body;
+    
+    if (!pergunta) {
+        return res.json({ resposta: "Faça uma pergunta!" });
+    }
+    
     const resposta = await cerebro.pensar(pergunta);
     res.json({ resposta });
 });
@@ -183,7 +268,7 @@ app.post('/api/ia/chat', async (req, res) => {
 // Análise completa
 app.post('/api/ia/analisar', async (req, res) => {
     const analise = await cerebro.pensar(
-        "Faça uma análise completa de segurança do sistema"
+        "Faça uma análise completa de segurança do sistema baseado nos dados atuais"
     );
     res.json({ analise });
 });
@@ -208,13 +293,16 @@ app.get('/api/testar', async (req, res) => {
             latencia: Date.now() - start + "ms",
             modelo: "Llama 3.1 8B (Groq)",
             resposta: response.data.choices[0].message.content,
-            usuarios: database.estatisticas.usersOnline
+            usuarios: database.estatisticas.usersOnline,
+            scans: database.antiCheatLogs.length,
+            db: fs.existsSync(DB_FILE) ? "salvo" : "apenas memória"
         });
     } catch (e) {
         res.json({
             status: "online",
             ia: "erro: " + e.message,
-            key: GROQ_KEY ? "configurada" : "faltando"
+            key: GROQ_KEY ? "configurada" : "faltando",
+            db: fs.existsSync(DB_FILE) ? "salvo" : "apenas memória"
         });
     }
 });
@@ -223,7 +311,9 @@ app.get('/api/testar', async (req, res) => {
 app.post('/api/comandos', (req, res) => {
     const { comando, valor } = req.body;
     database.configuracoes.comandoPendente = { 
-        comando, valor, timestamp: Date.now() 
+        comando, 
+        valor, 
+        timestamp: Date.now() 
     };
     res.json({ sucesso: true });
 });
@@ -237,7 +327,9 @@ app.get('/api/comandos/:userId', (req, res) => {
     }
 });
 
-// Limpeza de offline
+// ============================================
+// 🧹 LIMPEZA DE USUÁRIOS OFFLINE
+// ============================================
 setInterval(() => {
     const agora = Date.now();
     for (let id in database.usuarios) {
@@ -249,15 +341,24 @@ setInterval(() => {
         Object.values(database.usuarios).filter(u => u.online).length;
 }, 30000);
 
-// Anti-sono
+// ============================================
+// ⏰ ANTI-SONO
+// ============================================
 setInterval(async () => {
     try {
         await axios.get('https://cerebro-ia-mh3k.onrender.com/api/testar');
         console.log('⏰ Auto-ping');
-    } catch (e) {}
+    } catch (e) {
+        console.log('⏰ Ping falhou');
+    }
 }, 300000);
 
+// ============================================
+// 🚀 INICIAR SERVIDOR
+// ============================================
 const PORT = process.env.PORT || 3000;
 app.listen(PORT, () => {
     console.log('🧠 Cérebro IA rodando na porta ' + PORT);
+    console.log('💾 Banco:', fs.existsSync(DB_FILE) ? 'Carregado' : 'Novo');
+    console.log('🔍 Scans anteriores:', database.antiCheatLogs.length);
 });
