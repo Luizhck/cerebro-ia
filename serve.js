@@ -9,7 +9,7 @@ app.use(cors());
 app.use(express.json());
 
 const GEMINI_KEY = process.env.GEMINI_KEY;
-const GEMINI_URL = 'https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent';
+const GEMINI_URL = 'https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent';
 const DB_FILE = 'database.json';
 
 // ============================================
@@ -66,7 +66,7 @@ process.on('SIGTERM', () => { salvarDB(); process.exit(0); });
 process.on('SIGINT', () => { salvarDB(); process.exit(0); });
 
 // ============================================
-// 🧠 CÉREBRO IA - GEMINI
+// 🧠 CÉREBRO IA - GEMINI (CORRIGIDO)
 // ============================================
 class CerebroIA {
     constructor() {
@@ -111,16 +111,18 @@ class CerebroIA {
             };
 
             const response = await axios.post(
-                `${GEMINI_URL}?key=${GEMINI_KEY}`,
+                GEMINI_URL,
                 {
                     contents: [{
                         parts: [{
                             text: `DADOS DO SISTEMA:\n${JSON.stringify(dadosReais, null, 2)}\n\nPERGUNTA: ${prompt}\n\nResponda em português brasileiro, de forma direta e natural.`
                         }]
-                    }],
-                    generationConfig: {
-                        temperature: 0.9,
-                        maxOutputTokens: 500
+                    }]
+                },
+                {
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'x-goog-api-key': GEMINI_KEY
                     }
                 }
             );
@@ -225,16 +227,22 @@ app.post('/api/ia/chat', async (req, res) => {
 app.get('/api/testar', async (req, res) => {
     try {
         const start = Date.now();
-        const response = await axios.post(
-            `${GEMINI_URL}?key=${GEMINI_KEY}`,
+        await axios.post(
+            GEMINI_URL,
             {
                 contents: [{ parts: [{ text: 'Responda: OK' }] }]
+            },
+            {
+                headers: {
+                    'Content-Type': 'application/json',
+                    'x-goog-api-key': GEMINI_KEY
+                }
             }
         );
         
         res.json({
             status: "online",
-            ia: "conectado (Gemini)",
+            ia: "conectado (Gemini 2.0 Flash)",
             latencia: Date.now() - start + "ms",
             usuarios: database.estatisticas.usersOnline,
             scans: database.antiCheatLogs.length,
@@ -262,8 +270,8 @@ setInterval(async () => {
 
 const PORT = process.env.PORT || 3000;
 app.listen(PORT, () => {
-    console.log('🧠 qCloud Gemini rodando na porta ' + PORT);
+    console.log('🧠 qCloud Gemini 2.0 rodando na porta ' + PORT);
     console.log('💾 Banco:', fs.existsSync(DB_FILE) ? 'Carregado' : 'Novo');
-    console.log('🤖 IA: Gemini 1.5 Flash (grátis)');
+    console.log('🤖 Modelo: Gemini 2.0 Flash');
     console.log('✅ Sistema PRONTO!');
 });
