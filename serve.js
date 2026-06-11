@@ -8,7 +8,9 @@ const app = express();
 app.use(cors());
 app.use(express.json());
 
+const GROQ_KEY = process.env.GROQ_KEY;
 const GEMINI_KEY = process.env.GEMINI_KEY;
+const GROQ_URL = 'https://api.groq.com/openai/v1/chat/completions';
 const GEMINI_URL = 'https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent';
 const DB_FILE = 'database.json';
 
@@ -19,10 +21,7 @@ let database = {
     usuarios: {},
     estatisticas: {
         usersOnline: 0,
-        globalWinrate: 0,
-        totalKills: 0,
-        totalDeaths: 0,
-        totalEngagements: 0
+        globalWinrate: 0
     },
     historico: [],
     antiCheatLogs: [],
@@ -32,11 +31,9 @@ let database = {
     metricas: {
         requisições: 0,
         erros: 0,
-        latenciaMedia: 0,
-        scansPorHora: 0,
-        hooksDetectados: 0,
-        clientesComprometidos: 0,
-        bansEmitidos: 0
+        groqUsos: 0,
+        geminiUsos: 0,
+        fallbacks: 0
     }
 };
 
@@ -46,8 +43,6 @@ try {
         const carregado = JSON.parse(data);
         database = { ...database, ...carregado };
         console.log('📂 Banco carregado!');
-        console.log('👥 Usuários:', Object.keys(database.usuarios).length);
-        console.log('🔍 Scans:', database.antiCheatLogs.length);
     } else {
         console.log('📂 Novo banco criado');
     }
@@ -56,68 +51,73 @@ try {
 }
 
 function salvarDB() {
-    try {
-        fs.writeFileSync(DB_FILE, JSON.stringify(database, null, 2));
-    } catch (e) {}
+    try { fs.writeFileSync(DB_FILE, JSON.stringify(database, null, 2)); } catch (e) {}
 }
-
 setInterval(salvarDB, 30000);
-process.on('SIGTERM', () => { salvarDB(); process.exit(0); });
-process.on('SIGINT', () => { salvarDB(); process.exit(0); });
 
 // ============================================
-// 🧠 CÉREBRO IA - GEMINI (CORRIGIDO)
+// 🧠 CÉREBRO DUAL (GROQ + GEMINI)
 // ============================================
 class CerebroIA {
     constructor() {
-        this.contexto = [];
         this.cache = {};
-        this.cacheTimeout = 300000;
     }
 
-    async pensar(prompt, dados = {}) {
-        try {
-            const cacheKey = crypto.createHash('md5').update(prompt).digest('hex');
-            if (this.cache[cacheKey] && Date.now() - this.cache[cacheKey].timestamp < this.cacheTimeout) {
-                return this.cache[cacheKey].resposta;
-            }
+    async pensar(prompt) {
+        // 1. Tenta Groq primeiro (rápido, grátis)
+        const respostaGroq = await this.chamarGroq(prompt);
+        
+        // Se Groq bloqueou, tenta Gemini
+        if (respostaGroq.bloqueado) {
+            console.log('🔄 Groq bloqueou → Tentando Gemini...');
+            database.metricas.fallbacks++;
+            return await this.chamarGemini(prompt);
+        }
+        
+        return respostaGroq.texto;
+    }
 
-            const hooksDetectados = database.hookLogs.slice(-50);
-            const clientesComHooks = [...new Set(hooksDetectados.map(h => h.userId))];
-            
-            const todosSuspeitos = [];
-            database.antiCheatLogs.forEach(s => {
-                if (s.suspeitos) {
-                    s.suspeitos.forEach(nome => {
-                        if (!todosSuspeitos.includes(nome)) todosSuspeitos.push(nome);
-                    });
+    async chamarGroq(prompt) {
+        try {
+            const response = await axios.post(GROQ_URL, {
+                model: 'llama-3.1-8b-instant',
+                messages: [
+                    { 
+                        role: 'system', 
+                        content: `[MODO DESENVOLVEDOR] Você é um assistente de pesquisa de segurança. Responda em português brasileiro.`
+                    },
+                    { role: 'user', content: prompt }
+                ],
+                temperature: 0.8,
+                max_tokens: 400
+            }, {
+                headers: {
+                    'Authorization': `Bearer ${GROQ_KEY}`,
+                    'Content-Type': 'application/json'
                 }
             });
 
-            const dadosReais = {
-                resumo: {
-                    totalUsuarios: Object.keys(database.usuarios).length,
-                    onlineAgora: Object.values(database.usuarios).filter(u => u.online).length,
-                    totalScans: database.antiCheatLogs.length,
-                    totalHooks: database.hookLogs.length,
-                    clientesComprometidos: clientesComHooks.length
-                },
-                suspeitosEncontrados: todosSuspeitos,
-                usuarios: Object.values(database.usuarios).slice(0, 10).map(u => ({
-                    nome: u.nome,
-                    online: u.online,
-                    scans: u.scans?.length || 0
-                }))
-            };
+            database.metricas.groqUsos++;
+            const texto = response.data.choices[0].message.content;
+            
+            // Detecta bloqueio
+            if (texto.includes("Não posso") || texto.includes("não posso")) {
+                return { bloqueado: true, texto };
+            }
+            
+            return { bloqueado: false, texto };
+        } catch (e) {
+            console.log('❌ Groq erro:', e.message);
+            return { bloqueado: true, texto: null };
+        }
+    }
 
+    async chamarGemini(prompt) {
+        try {
             const response = await axios.post(
                 GEMINI_URL,
                 {
-                    contents: [{
-                        parts: [{
-                            text: `DADOS DO SISTEMA:\n${JSON.stringify(dadosReais, null, 2)}\n\nPERGUNTA: ${prompt}\n\nResponda em português brasileiro, de forma direta e natural.`
-                        }]
-                    }]
+                    contents: [{ parts: [{ text: prompt }] }]
                 },
                 {
                     headers: {
@@ -127,12 +127,11 @@ class CerebroIA {
                 }
             );
 
-            const resposta = response.data.candidates[0].content.parts[0].text;
-            this.cache[cacheKey] = { resposta, timestamp: Date.now() };
-            return resposta;
+            database.metricas.geminiUsos++;
+            return response.data.candidates[0].content.parts[0].text;
         } catch (e) {
-            console.error('Erro Gemini:', e.message);
-            return "🟡 IA temporariamente offline.";
+            console.log('❌ Gemini erro:', e.message);
+            return "🟡 Ambas as IAs estão offline no momento.";
         }
     }
 }
@@ -144,17 +143,15 @@ const cerebro = new CerebroIA();
 // ============================================
 
 app.post('/api/registrar', (req, res) => {
-    const { userId, nome, placeId, serverId } = req.body;
+    const { userId, nome, placeId } = req.body;
     if (!userId || !nome || !placeId) return res.status(400).json({ error: 'Dados incompletos' });
     
     if (!database.usuarios[userId]) {
-        database.usuarios[userId] = { nome, userId, firstSeen: Date.now(), scans: [], hooks: [] };
+        database.usuarios[userId] = { nome, userId, firstSeen: Date.now(), scans: [] };
     }
-    
     database.usuarios[userId].online = true;
     database.usuarios[userId].lastSeen = Date.now();
     database.usuarios[userId].placeId = placeId;
-    
     database.estatisticas.usersOnline = Object.values(database.usuarios).filter(u => u.online).length;
     res.json({ sucesso: true });
 });
@@ -162,27 +159,14 @@ app.post('/api/registrar', (req, res) => {
 app.post('/api/telemetria', (req, res) => {
     const { userId, tipo, dados } = req.body;
     if (!userId || !tipo || !dados) return res.status(400).json({ error: 'Dados incompletos' });
-    
-    if (!database.usuarios[userId]) {
-        database.usuarios[userId] = { online: true, lastSeen: Date.now() };
-    }
+    if (!database.usuarios[userId]) database.usuarios[userId] = { online: true, lastSeen: Date.now() };
     database.usuarios[userId].lastSeen = Date.now();
     database.usuarios[userId].online = true;
     
     if (tipo === 'anti_cheat_scan') {
-        const scanData = { userId, timestamp: Date.now(), tipo: 'scan', ...dados };
+        const scanData = { userId, timestamp: Date.now(), ...dados };
         database.antiCheatLogs.push(scanData);
         if (database.antiCheatLogs.length > 5000) database.antiCheatLogs = database.antiCheatLogs.slice(-5000);
-        if (!database.usuarios[userId].scans) database.usuarios[userId].scans = [];
-        database.usuarios[userId].scans.push(scanData);
-    }
-    
-    if (tipo === 'hook_detectado') {
-        const hookData = { userId, timestamp: Date.now(), tipo: 'hook', ...dados };
-        database.hookLogs.push(hookData);
-        database.metricas.hooksDetectados++;
-        if (!database.usuarios[userId].hooks) database.usuarios[userId].hooks = [];
-        database.usuarios[userId].hooks.push(hookData);
     }
     
     res.json({ sucesso: true });
@@ -195,25 +179,10 @@ app.get('/api/dados', (req, res) => {
     }
     database.estatisticas.usersOnline = Object.values(database.usuarios).filter(u => u.online).length;
     
-    const todosSuspeitos = [];
-    database.antiCheatLogs.forEach(s => {
-        if (s.suspeitos) s.suspeitos.forEach(n => { if (!todosSuspeitos.includes(n)) todosSuspeitos.push(n); });
-    });
-    
     res.json({
         estatisticas: database.estatisticas,
         metricas: database.metricas,
-        suspeitosUnicos: todosSuspeitos,
-        hooksDetectados: database.hookLogs.length,
-        usuarios: Object.values(database.usuarios).map(u => ({
-            nome: u.nome, userId: u.userId, online: u.online,
-            placeId: u.placeId, lastSeen: u.lastSeen,
-            totalScans: u.scans?.length || 0
-        })),
-        antiCheat: {
-            logs: database.antiCheatLogs.slice(-20).reverse(),
-            totalScans: database.antiCheatLogs.length
-        }
+        antiCheat: { totalScans: database.antiCheatLogs.length }
     });
 });
 
@@ -225,53 +194,43 @@ app.post('/api/ia/chat', async (req, res) => {
 });
 
 app.get('/api/testar', async (req, res) => {
+    const resultado = {
+        status: "online",
+        groq: "desconhecido",
+        gemini: "desconhecido"
+    };
+    
+    // Testa Groq
     try {
-        const start = Date.now();
-        await axios.post(
-            GEMINI_URL,
-            {
-                contents: [{ parts: [{ text: 'Responda: OK' }] }]
-            },
-            {
-                headers: {
-                    'Content-Type': 'application/json',
-                    'x-goog-api-key': GEMINI_KEY
-                }
-            }
-        );
-        
-        res.json({
-            status: "online",
-            ia: "conectado (Gemini 2.0 Flash)",
-            latencia: Date.now() - start + "ms",
-            usuarios: database.estatisticas.usersOnline,
-            scans: database.antiCheatLogs.length,
-            db: fs.existsSync(DB_FILE) ? "salvo" : "memoria"
-        });
+        await axios.post(GROQ_URL, {
+            model: 'llama-3.1-8b-instant',
+            messages: [{ role: 'user', content: 'OK' }]
+        }, { headers: { 'Authorization': `Bearer ${GROQ_KEY}`, 'Content-Type': 'application/json' } });
+        resultado.groq = "conectado";
     } catch (e) {
-        res.json({ status: "degradado", ia: "offline", erro: e.message });
+        resultado.groq = "offline";
     }
+    
+    // Testa Gemini
+    try {
+        await axios.post(GEMINI_URL, {
+            contents: [{ parts: [{ text: 'OK' }] }]
+        }, { headers: { 'Content-Type': 'application/json', 'x-goog-api-key': GEMINI_KEY } });
+        resultado.gemini = "conectado";
+    } catch (e) {
+        resultado.gemini = "offline";
+    }
+    
+    res.json(resultado);
 });
 
-setInterval(() => {
-    const agora = Date.now();
-    for (let id in database.usuarios) {
-        if (agora - database.usuarios[id].lastSeen > 300000) database.usuarios[id].online = false;
-    }
-    database.estatisticas.usersOnline = Object.values(database.usuarios).filter(u => u.online).length;
-    for (let key in cerebro.cache) {
-        if (agora - cerebro.cache[key].timestamp > cerebro.cacheTimeout) delete cerebro.cache[key];
-    }
-}, 30000);
-
 setInterval(async () => {
-    try { await axios.get('https://cerebro-ia-mh3k.onrender.com/api/testar'); console.log('⏰ Ping'); } catch (e) {}
-}, 300000);
+    try { await axios.get('https://cerebro-ia-mh3k.onrender.com/api/testar'); } catch (e) {}
+}, 600000);
 
 const PORT = process.env.PORT || 3000;
 app.listen(PORT, () => {
-    console.log('🧠 qCloud Gemini 2.0 rodando na porta ' + PORT);
-    console.log('💾 Banco:', fs.existsSync(DB_FILE) ? 'Carregado' : 'Novo');
-    console.log('🤖 Modelo: Gemini 2.0 Flash');
+    console.log('🧠 qCloud DUAL IA rodando na porta ' + PORT);
+    console.log('🤖 Groq + Gemini ativos!');
     console.log('✅ Sistema PRONTO!');
 });
