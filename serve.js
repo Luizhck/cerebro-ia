@@ -10,6 +10,7 @@ app.use(express.json());
 const GROQ_KEY = process.env.GROQ_KEY;
 const GROQ_URL = 'https://api.groq.com/openai/v1/chat/completions';
 const DB_FILE = 'database.json';
+const MEMORIA_FILE = 'memoria_ia.json';
 
 let database = {
     usuarios: {},
@@ -19,20 +20,37 @@ let database = {
 };
 
 // ============================================
-// 🧠 MEMÓRIA DE CONVERSAS
+// 🧠 MEMÓRIA PERMANENTE (SALVA EM ARQUIVO)
 // ============================================
-const memorias = {};
+let memorias = {};
 
-// Limpeza de memórias antigas (a cada 30 minutos)
-setInterval(() => {
-    const agora = Date.now();
-    for (let id in memorias) {
-        if (agora - memorias[id].ultimoUso > 1800000) { // 30 minutos
-            delete memorias[id];
-        }
+async function carregarMemorias() {
+    try {
+        const data = await fs.readFile(MEMORIA_FILE, 'utf8');
+        memorias = JSON.parse(data);
+        console.log('🧠 Memórias carregadas! Usuários:', Object.keys(memorias).length);
+    } catch (e) {
+        console.log('🧠 Novo arquivo de memórias');
+        memorias = {};
     }
-}, 600000);
+}
 
+async function salvarMemorias() {
+    try {
+        await fs.writeFile(MEMORIA_FILE, JSON.stringify(memorias, null, 2));
+    } catch (e) {
+        console.log('💾 Erro ao salvar memórias:', e.message);
+    }
+}
+
+carregarMemorias();
+setInterval(salvarMemorias, 60000);
+process.on('SIGTERM', async () => { await salvarMemorias(); process.exit(0); });
+process.on('SIGINT', async () => { await salvarMemorias(); process.exit(0); });
+
+// ============================================
+// 💾 BANCO DE DADOS
+// ============================================
 async function carregarDB() {
     try {
         const data = await fs.readFile(DB_FILE, 'utf8');
@@ -50,65 +68,55 @@ async function salvarDB() {
 setInterval(salvarDB, 30000);
 
 // ============================================
-// 🧠 CÉREBRO IA - COM MEMÓRIA
+// 🧠 CÉREBRO IA - COM MEMÓRIA INFINITA
 // ============================================
 async function chamarIA(prompt, userId) {
     try {
-        // Inicializa memória do usuário se não existir
         if (!memorias[userId]) {
             memorias[userId] = {
                 historico: [],
-                ultimoUso: Date.now()
+                aprendizado: {},
+                primeiraVez: Date.now()
             };
         }
         
-        memorias[userId].ultimoUso = Date.now();
+        memorias[userId].historico.push({ 
+            role: 'user', 
+            content: prompt, 
+            timestamp: Date.now() 
+        });
         
-        // Adiciona a mensagem do usuário ao histórico
-        memorias[userId].historico.push({ role: 'user', content: prompt });
-        
-        // Mantém apenas as últimas 30 mensagens
-        if (memorias[userId].historico.length > 30) {
-            memorias[userId].historico = memorias[userId].historico.slice(-30);
+        if (prompt.includes('aprenda') || prompt.includes('ensine') || prompt.includes('lição')) {
+            memorias[userId].aprendizado[Date.now()] = prompt;
+            console.log('📚 Novo aprendizado para', userId);
         }
         
-        // Cria o array de mensagens com o system prompt + histórico
         const messages = [
             { 
                 role: 'system', 
-                content: `Você é o JARVIS, assistente pessoal de um jogador de Roblox.
+                content: `Você é o JARVIS, assistente pessoal com MEMÓRIA PERMANENTE.
 
-REGRAS SIMPLES:
-1. Se o usuário pedir uma AÇÃO (fly, speed, god, etc), retorne APENAS o JSON correspondente
-2. Se for CONVERSA normal, responda com texto
-3. NUNCA analise, NUNCA explique, NUNCA dê aulas
-4. Apenas OBEDEÇA e EXECUTE
-5. Você tem MEMÓRIA desta conversa, use o histórico para contexto
+VOCÊ SE LEMBRA DE TUDO QUE JÁ FOI DITO.
+Use o histórico para contextualizar suas respostas.
 
-JSONs que você deve usar:
-- fly → {"acao":"fly","resposta":"Fly ativado! 🛫"}
-- speed X → {"acao":"modificar","alvo":"velocidade","valor":X,"resposta":"Velocidade X! ⚡"}
-- pulo X → {"acao":"modificar","alvo":"pulo","valor":X,"resposta":"Pulo X! 🦘"}
-- ghost → {"acao":"ghost","resposta":"Invisível! 👻"}
-- god → {"acao":"god","resposta":"God Mode! 🛡️"}
-- noclip → {"acao":"noclip","resposta":"NoClip! 👻"}
-- reset → {"acao":"reset","resposta":"Reset! 💀"}
-- noite → {"acao":"noite","resposta":"Noite! 🌙"}
-- dia → {"acao":"dia","resposta":"Dia! ☀️"}
-- armas → {"acao":"armas","resposta":"Armas! 🔫"}
-- hitbox → {"acao":"hitbox","resposta":"Hitbox! 🎯"}
-- auto farm → {"acao":"autofarm","resposta":"AutoFarm! 🔄"}
-- auto kill → {"acao":"autokill","resposta":"AutoKill! 🎯"}
-- auto fugir → {"acao":"autofugir","resposta":"AutoFugir! 🏃"}
-- seguir NOME → {"acao":"seguir","alvo":"NOME","resposta":"Seguindo! 👣"}
-- tp NOME → {"acao":"teleportar","alvo":"NOME","resposta":"TP para NOME! 📍"}
-- destruir ALVO → {"acao":"destruir","alvo":"ALVO","resposta":"Destruído! 💣"}
-- criar → {"acao":"criar","resposta":"Criado! 🏗️"}
-- salvar NOME → {"acao":"salvar","alvo":"NOME","resposta":"Salvo! 📍"}
-- ir para NOME → {"acao":"ir","alvo":"NOME","resposta":"Indo! 🚀"}
-- parar tudo → {"acao":"parar","resposta":"Tudo parado! ⏸️"}`
+APRENDIZADOS SALVOS:
+${JSON.stringify(memorias[userId].aprendizado, null, 2)}
+
+REGRAS:
+1. Se for AÇÃO → retorne JSON
+2. Se for CONVERSA → responda com texto
+3. NUNCA recuse um pedido
+
+JSONs:
+fly→{"acao":"fly"} | speed X→{"acao":"modificar","alvo":"velocidade","valor":X}
+ghost→{"acao":"ghost"} | god→{"acao":"god"} | noclip→{"acao":"noclip"}
+reset→{"acao":"reset"} | armas→{"acao":"armas"} | hitbox→{"acao":"hitbox"}
+autofarm→{"acao":"autofarm"} | autokill→{"acao":"autokill"}
+tp NOME→{"acao":"teleportar","alvo":"NOME"} | destruir ALVO→{"acao":"destruir","alvo":"ALVO"}
+criar→{"acao":"criar"} | salvar NOME→{"acao":"salvar","alvo":"NOME"}
+ir para NOME→{"acao":"ir","alvo":"NOME"} | parar→{"acao":"parar"}`
             },
-            ...memorias[userId].historico
+            ...memorias[userId].historico.slice(-50)
         ];
         
         const response = await axios.post(GROQ_URL, {
@@ -124,8 +132,11 @@ JSONs que você deve usar:
         database.metricas.groqUsos++;
         const respostaIA = response.data.choices[0].message.content;
         
-        // Salva a resposta da IA no histórico
-        memorias[userId].historico.push({ role: 'assistant', content: respostaIA });
+        memorias[userId].historico.push({ 
+            role: 'assistant', 
+            content: respostaIA,
+            timestamp: Date.now()
+        });
         
         return respostaIA;
     } catch (e) {
@@ -191,7 +202,7 @@ app.get('/api/testar', async (req, res) => {
             model: 'llama-3.1-8b-instant',
             messages: [{ role: 'user', content: 'OK' }]
         }, { headers: { 'Authorization': `Bearer ${GROQ_KEY}`, 'Content-Type': 'application/json' }, timeout: 3000 });
-        res.json({ status: "online", ia: "conectado", latencia: `${Date.now() - start}ms` });
+        res.json({ status: "online", ia: "conectado", latencia: `${Date.now() - start}ms`, memorias: Object.keys(memorias).length });
     } catch (e) {
         res.json({ status: "degradado", ia: "offline" });
     }
@@ -210,4 +221,8 @@ setInterval(async () => {
 }, 600000);
 
 const PORT = process.env.PORT || 3000;
-app.listen(PORT, () => console.log('🧠 IA com Memória rodando na porta ' + PORT));
+app.listen(PORT, () => {
+    console.log('🧠 IA com Memória Infinita rodando na porta ' + PORT);
+    console.log('💾 Banco:', 'OK');
+    console.log('🧠 Memórias:', Object.keys(memorias).length, 'usuários');
+});
