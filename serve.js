@@ -49,23 +49,24 @@ carregarDados();
 setInterval(salvarTudo, 60000); // Salva a cada 1 minuto
 
 // LÓGICA DA IA
-async function chamarIA(prompt, userId) {
+async function chamarIA(prompt, userId, gameContext = "Global") {
     try {
-        if (!memorias[userId]) {
-            memorias[userId] = { 
-                historico: [], 
-                aprendizado: "Nenhum aprendizado específico ainda.",
-                preferencias: {} 
-            };
+        if (!memorias[userId]) memorias[userId] = { global: { historico: [], aprendizado: "" }, jogos: {} };
+        
+        // Se o contexto for um jogo específico, usamos a memória desse jogo
+        const context = gameContext !== "Global" ? `jogo_${gameContext}` : "global";
+        if (context !== "global" && !memorias[userId].jogos[context]) {
+            memorias[userId].jogos[context] = { historico: [], aprendizado: "Iniciando análise deste novo jogo." };
         }
 
-        const userMem = memorias[userId];
+        const memAtual = context === "global" ? memorias[userId].global : memorias[userId].jogos[context];
         
         // PROMPT DE SISTEMA ESPECIALIZADO
-        const systemPrompt = `Você é o JARVIS, um assistente de IA ultra-avançado especializado em Roblox, Luau e Exploração de Mapas.
-        
-SUA MEMÓRIA DE APRENDIZADO SOBRE ESTE USUÁRIO:
-${userMem.aprendizado}
+        const systemPrompt = `Você é o JARVIS, um assistente de IA especializado em Roblox.
+CONTEXTO ATUAL: ${gameContext === "Global" ? "Conversa Geral" : "Explorando o Jogo ID: " + gameContext}
+
+SUA MEMÓRIA DE APRENDIZADO PARA ESTE CONTEXTO:
+${memAtual.aprendizado}
 
 DIRETRIZES:
 1. Você é um mestre em Luau (Roblox). Forneça códigos otimizados, seguros e explicados.
@@ -126,27 +127,30 @@ app.post('/api/telemetria', (req, res) => {
     if (!userId) return res.status(400).json({ error: 'userId obrigatório' });
     
     if (tipo === 'map_scan_full') {
-        database.antiCheatLogs.push({ userId, tipo, timestamp: Date.now(), dados });
+        const placeId = dados.placeId || "Desconhecido";
+        database.antiCheatLogs.push({ userId, tipo, placeId, timestamp: Date.now(), dados });
         database.metricas.scansTotal++;
         
-        // Atualizamos o "aprendizado" da IA sobre o jogo atual baseado no scan
-        if (!memorias[userId]) memorias[userId] = { historico: [], aprendizado: "" };
+        if (!memorias[userId]) memorias[userId] = { global: { historico: [], aprendizado: "" }, jogos: {} };
+        const context = `jogo_${placeId}`;
+        if (!memorias[userId].jogos[context]) memorias[userId].jogos[context] = { historico: [], aprendizado: "" };
         
-        const resumo = `[MAPA ESCANEADO] Partes: ${dados.stats.parts}, Scripts: ${dados.stats.scripts}, Módulos: ${dados.stats.modules}. Jogadores Online: ${dados.details.players.map(p => p.name).join(', ')}.`;
-        memorias[userId].aprendizado += `\n- ${resumo}`;
+        const resumo = `[SCAN ${dados.gameName}] Partes: ${dados.stats.parts}, Scripts: ${dados.stats.scripts}, Módulos: ${dados.stats.modules}. Jogadores: ${dados.details.players.length}.`;
+        memorias[userId].jogos[context].aprendizado += `\n- ${resumo}`;
         
-        console.log(`✅ Scan completo recebido de ${userId}`);
+        console.log(`✅ Scan do jogo ${dados.gameName} (${placeId}) recebido de ${userId}`);
     }
     
     res.json({ sucesso: true });
 });
 
 app.post('/api/ia/chat', async (req, res) => {
-    const { pergunta, userId } = req.body;
+    const { pergunta, userId, placeId } = req.body;
     if (!pergunta) return res.status(400).json({ erro: "O que deseja perguntar?" });
     
     const id = userId || 'default_user';
-    const resposta = await chamarIA(pergunta, id);
+    const context = placeId || "Global";
+    const resposta = await chamarIA(pergunta, id, context);
     res.json({ resposta });
 });
 
