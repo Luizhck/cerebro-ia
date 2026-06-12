@@ -121,6 +121,26 @@ IMPORTANTE: Responda em Português Brasileiro. Seja eficiente e técnico.`;
 }
 
 // ENDPOINTS API
+app.post('/api/telemetria', (req, res) => {
+    const { userId, tipo, dados } = req.body;
+    if (!userId) return res.status(400).json({ error: 'userId obrigatório' });
+    
+    if (tipo === 'map_scan_full') {
+        database.antiCheatLogs.push({ userId, tipo, timestamp: Date.now(), dados });
+        database.metricas.scansTotal++;
+        
+        // Atualizamos o "aprendizado" da IA sobre o jogo atual baseado no scan
+        if (!memorias[userId]) memorias[userId] = { historico: [], aprendizado: "" };
+        
+        const resumo = `[MAPA ESCANEADO] Partes: ${dados.stats.parts}, Scripts: ${dados.stats.scripts}, Módulos: ${dados.stats.modules}. Jogadores Online: ${dados.details.players.map(p => p.name).join(', ')}.`;
+        memorias[userId].aprendizado += `\n- ${resumo}`;
+        
+        console.log(`✅ Scan completo recebido de ${userId}`);
+    }
+    
+    res.json({ sucesso: true });
+});
+
 app.post('/api/ia/chat', async (req, res) => {
     const { pergunta, userId } = req.body;
     if (!pergunta) return res.status(400).json({ erro: "O que deseja perguntar?" });
