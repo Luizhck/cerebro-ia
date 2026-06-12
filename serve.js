@@ -6,6 +6,7 @@ const fs = require('fs').promises;
 const app = express();
 app.use(cors());
 app.use(express.json());
+app.use('/plugins', express.static('plugins')); // Serve a pasta de plugins
 
 const GROQ_KEY = process.env.GROQ_KEY;
 const GROQ_URL = 'https://api.groq.com/openai/v1/chat/completions';
@@ -115,4 +116,7 @@ app.get('/api/status', (req, res) => {
 });
 
 const PORT = process.env.PORT || 3000;
-app.listen(PORT, () => console.log(`🚀 JARVIS FINAL na porta ${PORT}`));
+app.listen(PORT, async () => {
+    try { await fs.mkdir('plugins'); } catch(e) {} // Cria a pasta de plugins se não existir
+    console.log(`🚀 JARVIS MODULAR na porta ${PORT}`);
+});
