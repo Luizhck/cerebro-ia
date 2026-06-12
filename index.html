@@ -16,9 +16,7 @@
             --text: #e0e0e0;
             --text2: #8888aa;
         }
-
         * { margin: 0; padding: 0; box-sizing: border-box; }
-
         body {
             background: var(--bg);
             color: var(--text);
@@ -29,7 +27,6 @@
             padding: 0;
             margin: 0;
         }
-
         .container {
             width: 100%;
             height: 100vh;
@@ -37,8 +34,6 @@
             display: flex;
             flex-direction: column;
         }
-
-        /* HEADER COMPACTO */
         .header {
             background: var(--card);
             border-bottom: 1px solid var(--border);
@@ -67,8 +62,6 @@
             border-radius: 12px;
             white-space: nowrap;
         }
-
-        /* CHAT OCUPA TUDO */
         .chat-container {
             flex: 1;
             display: flex;
@@ -76,7 +69,6 @@
             overflow: hidden;
             background: var(--bg);
         }
-
         .chat-messages {
             flex: 1;
             overflow-y: auto;
@@ -85,10 +77,8 @@
             flex-direction: column;
             gap: 10px;
         }
-
         .chat-messages::-webkit-scrollbar { width: 3px; }
         .chat-messages::-webkit-scrollbar-thumb { background: var(--border); border-radius: 10px; }
-
         .message {
             max-width: 88%;
             animation: fadeIn 0.2s ease;
@@ -97,10 +87,8 @@
             from { opacity: 0; transform: translateY(8px); }
             to { opacity: 1; transform: translateY(0); }
         }
-
         .message.user { align-self: flex-end; }
         .message.ia { align-self: flex-start; }
-
         .message .bubble {
             padding: 12px 14px;
             border-radius: 14px;
@@ -110,19 +98,16 @@
             white-space: pre-wrap;
             word-break: break-word;
         }
-
         .message.user .bubble {
             background: var(--blue);
             color: #fff;
             border-bottom-right-radius: 4px;
         }
-
         .message.ia .bubble {
             background: var(--card);
             border: 1px solid var(--border);
             border-bottom-left-radius: 4px;
         }
-
         .message .copy-btn {
             position: absolute;
             top: 6px;
@@ -140,15 +125,12 @@
         }
         .message.ia .bubble:hover .copy-btn { opacity: 1; }
         .copy-btn:active { background: var(--green); color: #000; }
-
         .message .sender {
             font-size: 0.65em;
             color: var(--text2);
             margin-bottom: 3px;
             padding: 0 2px;
         }
-
-        /* INPUT FIXO EMBAIXO */
         .input-area {
             padding: 10px 12px;
             border-top: 1px solid var(--border);
@@ -179,8 +161,6 @@
             font-weight: 600;
         }
         .input-area button:active { background: #5599ff; }
-
-        /* BOTÕES RÁPIDOS */
         .quick-buttons {
             display: flex;
             gap: 4px;
@@ -201,8 +181,6 @@
             flex-shrink: 0;
         }
         .quick-btn:active { background: var(--blue); color: #fff; }
-
-        /* TOAST */
         .toast {
             position: fixed;
             bottom: 80px;
@@ -223,7 +201,6 @@
             85% { opacity: 1; }
             100% { opacity: 0; }
         }
-
         @media (min-width: 768px) {
             .message { max-width: 65%; }
             .chat-messages { padding: 20px; }
@@ -232,7 +209,6 @@
 </head>
 <body>
     <div class="container">
-        <!-- HEADER -->
         <div class="header">
             <div class="logo">🧠</div>
             <h1>LRMODS IA</h1>
@@ -242,7 +218,6 @@
             </div>
         </div>
 
-        <!-- CHAT -->
         <div class="chat-container">
             <div class="chat-messages" id="chatBox">
                 <div class="message ia">
@@ -346,7 +321,8 @@
                 const r = await fetch(API + '/api/dados');
                 const d = await r.json();
                 document.getElementById('online').textContent = d.estatisticas?.usersOnline || 0;
-                document.getElementById('scans').textContent = d.antiCheat?.totalScans || 0;
+                // CORRIGIDO: usa scansAcumulados primeiro
+                document.getElementById('scans').textContent = d.scansAcumulados || d.antiCheat?.totalScans || 0;
             } catch (e) {}
         }
         setInterval(att, 5000);
