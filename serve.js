@@ -18,28 +18,44 @@ let database = {
     metricas: { groqUsos: 0, scansTotal: 0 }
 };
 
+// ============================================
+// 💾 BANCO DE DADOS ASSÍNCRONO
+// ============================================
 async function carregarDB() {
     try {
         const data = await fs.readFile(DB_FILE, 'utf8');
         database = { ...database, ...JSON.parse(data) };
-        console.log('📂 Banco carregado!');
+        console.log('📂 Banco carregado com sucesso!');
     } catch (e) {
-        console.log('📂 Novo banco');
+        console.log('📂 Criando novo arquivo de banco de dados...');
     }
 }
 carregarDB();
 
 async function salvarDB() {
-    try { await fs.writeFile(DB_FILE, JSON.stringify(database, null, 2)); } catch (e) {}
+    try {
+        await fs.writeFile(DB_FILE, JSON.stringify(database, null, 2));
+    } catch (e) {
+        console.error('❌ Erro ao salvar banco:', e.message);
+    }
 }
 setInterval(salvarDB, 30000);
 
+// Limpeza de usuários inativos
 setInterval(() => {
     const agora = Date.now();
+    let mudou = false;
+    
     Object.values(database.usuarios).forEach(u => {
-        if (u.online && (agora - u.lastSeen > 300000)) u.online = false;
+        if (u.online && (agora - u.lastSeen > 300000)) {
+            u.online = false;
+            mudou = true;
+        }
     });
-    database.estatisticas.usersOnline = Object.values(database.usuarios).filter(u => u.online).length;
+    
+    if (mudou) {
+        database.estatisticas.usersOnline = Object.values(database.usuarios).filter(u => u.online).length;
+    }
 }, 60000);
 
 // ============================================
