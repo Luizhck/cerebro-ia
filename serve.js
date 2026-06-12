@@ -93,5 +93,26 @@ app.post('/api/ia/chat', async (req, res) => {
     res.json({ resposta });
 });
 
+app.get('/api/testar', async (req, res) => {
+    try {
+        const start = Date.now();
+        await axios.post(GROQ_URL, {
+            model: 'llama-3.3-70b-versatile',
+            messages: [{ role: 'user', content: 'ping' }]
+        }, { headers: { 'Authorization': `Bearer ${GROQ_KEY}` }, timeout: 5000 });
+        res.json({ status: "online", ia: "conectado", latencia: `${Date.now() - start}ms` });
+    } catch (e) {
+        res.json({ status: "degradado", ia: "offline", erro: e.message });
+    }
+});
+
+app.get('/api/status', (req, res) => {
+    res.json({
+        servidor: "JARVIS ULTIMATE",
+        metricas: database.metricas,
+        usuarios_ativos: Object.keys(memorias).length
+    });
+});
+
 const PORT = process.env.PORT || 3000;
 app.listen(PORT, () => console.log(`🚀 JARVIS FINAL na porta ${PORT}`));
