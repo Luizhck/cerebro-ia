@@ -20,7 +20,7 @@ let database = {
 };
 
 // ============================================
-// 🧠 MEMÓRIA PERMANENTE (SALVA EM ARQUIVO)
+// 🧠 MEMÓRIA PERMANENTE
 // ============================================
 let memorias = {};
 
@@ -48,9 +48,6 @@ setInterval(salvarMemorias, 60000);
 process.on('SIGTERM', async () => { await salvarMemorias(); process.exit(0); });
 process.on('SIGINT', async () => { await salvarMemorias(); process.exit(0); });
 
-// ============================================
-// 💾 BANCO DE DADOS
-// ============================================
 async function carregarDB() {
     try {
         const data = await fs.readFile(DB_FILE, 'utf8');
@@ -88,19 +85,14 @@ async function chamarIA(prompt, userId) {
         
         if (prompt.includes('aprenda') || prompt.includes('ensine') || prompt.includes('lição')) {
             memorias[userId].aprendizado[Date.now()] = prompt;
-            console.log('📚 Novo aprendizado para', userId);
         }
         
         const messages = [
             { 
                 role: 'system', 
                 content: `Você é o JARVIS, assistente pessoal com MEMÓRIA PERMANENTE.
-
 VOCÊ SE LEMBRA DE TUDO QUE JÁ FOI DITO.
-Use o histórico para contextualizar suas respostas.
-
-APRENDIZADOS SALVOS:
-${JSON.stringify(memorias[userId].aprendizado, null, 2)}
+APRENDIZADOS: ${JSON.stringify(memorias[userId].aprendizado, null, 2)}
 
 REGRAS:
 1. Se for AÇÃO → retorne JSON
@@ -216,13 +208,29 @@ setInterval(() => {
     database.estatisticas.usersOnline = Object.values(database.usuarios).filter(u => u.online).length;
 }, 30000);
 
+// ============================================
+// ⏰ ANTI-SONO AGRESSIVO (PING DUPLO A CADA 4 MIN)
+// ============================================
 setInterval(async () => {
-    try { await axios.get('https://cerebro-ia-mh3k.onrender.com/api/testar', { timeout: 5000 }); } catch (e) {}
-}, 600000);
+    try { 
+        await axios.get('https://cerebro-ia-mh3k.onrender.com/api/testar', { timeout: 10000 }); 
+        console.log('⏰ Ping OK');
+    } catch (e) {
+        console.log('⏰ Ping falhou, tentando de novo...');
+        await new Promise(r => setTimeout(r, 60000));
+        try {
+            await axios.get('https://cerebro-ia-mh3k.onrender.com/api/testar', { timeout: 10000 });
+            console.log('⏰ Ping recuperado!');
+        } catch (e2) {
+            console.log('⏰ Ping duplo falhou');
+        }
+    }
+}, 240000); // 4 minutos
 
 const PORT = process.env.PORT || 3000;
 app.listen(PORT, () => {
-    console.log('🧠 IA com Memória Infinita rodando na porta ' + PORT);
+    console.log('🧠 IA com Memória Infinita + Anti-Sono rodando na porta ' + PORT);
     console.log('💾 Banco:', 'OK');
     console.log('🧠 Memórias:', Object.keys(memorias).length, 'usuários');
+    console.log('⏰ Anti-Sono: A cada 4 min (ping duplo)');
 });
