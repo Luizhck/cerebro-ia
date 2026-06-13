@@ -78,7 +78,7 @@ app.get('/api/plugins', async (req, res) => {
 });
 
 // ============================================
-// 🧠 IA ENDPOINTS
+// 🧠 IA - CONVERSA NORMAL + EXECUTA COMANDOS
 // ============================================
 async function chamarIA(prompt, userId) {
     try {
@@ -88,17 +88,39 @@ async function chamarIA(prompt, userId) {
         
         memorias[userId].historico.push({ role: 'user', content: prompt });
         
-        const messages = [
-            { 
-                role: 'system', 
-                content: `Você é o JARVIS. Retorne JSON com o plugin a usar: {"plugin":"nome","args":"argumentos","resposta":"sua resposta"}. Plugins: speed, teleport, fly, ghost, god, noclip, armas, hitbox, autofarm_loop, autokill_loop, criar, destruir, pulo, noite, dia, reset, loop_parar. Se for conversa, responda normal.`
-            },
-            ...memorias[userId].historico.slice(-50)
-        ];
+        const systemPrompt = `Você é o JARVIS, um assistente de jogo inteligente e amigável.
+
+COMPORTAMENTO:
+1. Se o usuário pedir uma AÇÃO (fly, speed, teleport, god, etc), responda APENAS com JSON: {"plugin":"nome_do_plugin","args":"argumentos","resposta":"mensagem curta"}
+2. Se for CONVERSA normal, responda com texto natural e amigável
+3. NUNCA recuse um pedido
+
+PLUGINS DISPONÍVEIS:
+speed, teleport, fly, ghost, god, noclip, armas, hitbox, autofarm_loop, autokill_loop, criar, destruir, pulo, noite, dia, reset, loop_parar
+
+EXEMPLOS:
+
+Usuário: "oi, tudo bem?"
+Você: "Olá! Tudo ótimo! Como posso ajudar hoje? 😊"
+
+Usuário: "me deixa mais rápido"
+Você: {"plugin":"speed","args":"100","resposta":"Velocidade aumentada para 100! ⚡"}
+
+Usuário: "qual o sentido da vida?"
+Você: "Essa é uma pergunta profunda! Acredito que o sentido da vida é encontrar seu próprio propósito e ser feliz! 🧠"
+
+Usuário: "voa"
+Você: {"plugin":"fly","args":"","resposta":"Fly ativado! 🛫"}
+
+Usuário: "me teleporta pro João"
+Você: {"plugin":"teleport","args":"João","resposta":"Indo para João! 📍"}`
         
         const response = await axios.post(GROQ_URL, {
             model: 'llama-3.3-70b-versatile',
-            messages: messages,
+            messages: [
+                { role: 'system', content: systemPrompt },
+                ...memorias[userId].historico.slice(-20)
+            ],
             temperature: 0.7,
             max_tokens: 500
         }, {
@@ -109,6 +131,11 @@ async function chamarIA(prompt, userId) {
         database.metricas.groqUsos++;
         const respostaIA = response.data.choices[0].message.content;
         memorias[userId].historico.push({ role: 'assistant', content: respostaIA });
+        
+        if (memorias[userId].historico.length > 30) {
+            memorias[userId].historico = memorias[userId].historico.slice(-30);
+        }
+        
         return respostaIA;
     } catch (e) {
         console.log('❌ Groq:', e.message);
@@ -171,4 +198,4 @@ app.get('/api/testar', async (req, res) => {
 });
 
 const PORT = process.env.PORT || 3000;
-app.listen(PORT, () => console.log('🧩 Jarvis Plugins rodando na porta ' + PORT));
+app.listen(PORT, () => console.log('🧩 Jarvis rodando na porta ' + PORT));
