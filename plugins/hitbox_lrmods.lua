@@ -1,6 +1,5 @@
 -- ============================================
--- HITBOX EXTENDER PLUGIN - COMPLETO
--- Todas as funções do FurryHBE original
+-- HITBOX EXTENDER PLUGIN - MOBILE OTIMIZADO
 -- ============================================
 
 if getgenv().HitboxPluginLoaded ~= nil then
@@ -12,52 +11,35 @@ if not game:IsLoaded() then
     game.Loaded:Wait()
 end
 
--- Carrega dependência
 if not getgenv().MTAPIMutex then
     pcall(function()
         loadstring(game:HttpGet("https://raw.githubusercontent.com/RectangularObject/MT-Api-v2/main/__source/mt-api%20v2.lua", true))()
     end)
 end
 
--- ============================================
--- CONFIGURAÇÕES COMPLETAS
--- ============================================
 local Settings = {
-    -- Principal
     Enabled = false,
     Size = 10,
     Transparency = 0.5,
-    
-    -- Partes do corpo
     BodyParts = {"HumanoidRootPart"},
     CustomPartName = "HeadHB",
-    
-    -- Verificações
     SitCheck = true,
     FFCheck = true,
-    
-    -- Times e jogadores
     IgnoreOwnTeam = true,
-    IgnorePlayers = {},      -- Lista de nomes para ignorar
-    IgnoreTeams = {},        -- Lista de times para ignorar
-    
-    -- Colisões
+    IgnorePlayers = {},
+    IgnoreTeams = {},
     CollisionsEnabled = false
 }
 
--- Serviços
 local Teams = game:GetService("Teams")
 local Players = game:GetService("Players")
 local Workspace = game:GetService("Workspace")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
-local RunService = game:GetService("RunService")
+local UserInputService = game:GetService("UserInputService")
 local lPlayer = Players.LocalPlayer
 local players = {}
 local teamModule = nil
 
--- ============================================
--- FUNÇÕES PRINCIPAIS
--- ============================================
 local function updatePlayers()
     if not getgenv().HitboxPluginLoaded then return end
     if not Settings.Enabled then return end
@@ -68,7 +50,6 @@ local function updatePlayers()
     end
 end
 
--- Inicializa módulos específicos
 pcall(function()
     if game.GameId == 504234221 then
         teamModule = require(ReplicatedStorage.Scripts.Modules.PlayerModule)
@@ -78,18 +59,12 @@ pcall(function()
     end
 end)
 
--- ============================================
--- ADICIONAR JOGADOR
--- ============================================
 local function addPlayer(player)
     players[player] = {}
     local playerIdx = players[player]
     local playerChar = player.Character
     local defaultProperties = {}
 
-    -- ============================================
-    -- DETECÇÃO DE TIME (COMPLETA)
-    -- ============================================
     local function isTeammate()
         if game.GameId == 718936923 then
             if not lPlayer.Character or not playerChar or not playerChar:FindFirstChild("HumanoidRootPart") then return true end
@@ -172,17 +147,12 @@ local function addPlayer(player)
 
     local function isIgnored()
         if not playerChar then return true end
-        -- Verifica se o time do jogador está na lista de ignorados
         local teamIgnored = player.Team and Settings.IgnoreTeams[player.Team.Name]
-        -- Verifica se o nome do jogador está na lista de ignorados
         local playerIgnored = Settings.IgnorePlayers[player.Name]
-        -- Verifica se é do mesmo time e a opção está ativada
         local sameTeam = Settings.IgnoreOwnTeam and isTeammate()
-        
         return teamIgnored or playerIgnored or sameTeam
     end
 
-    -- Sistema de hooks
     local debounce = false
     local function setup(part)
         defaultProperties[part.Name] = {
@@ -319,12 +289,10 @@ local function addPlayer(player)
     end)
 end
 
--- Remove jogador
 local function removePlayer(player)
     players[player] = nil
 end
 
--- Inicializa jogadores
 for _, player in pairs(Players:GetPlayers()) do
     if player ~= lPlayer then
         addPlayer(player)
@@ -347,7 +315,6 @@ lPlayer.CharacterAdded:Connect(function()
     updatePlayers()
 end)
 
--- Loop de atualização
 task.spawn(function()
     while getgenv().HitboxPluginLoaded do
         if Settings.Enabled then
@@ -358,115 +325,92 @@ task.spawn(function()
 end)
 
 -- ============================================
--- API COMPLETA
+-- API
 -- ============================================
 local HitboxAPI = {
-    -- Ativar/Desativar
     Toggle = function(state)
         Settings.Enabled = state
         updatePlayers()
     end,
     
-    -- Tamanho
     SetSize = function(size)
         Settings.Size = math.clamp(size, 2, 100)
         updatePlayers()
     end,
     
-    -- Transparência
     SetTransparency = function(transparency)
         Settings.Transparency = math.clamp(transparency, 0, 1)
         updatePlayers()
     end,
     
-    -- Partes do corpo
     SetBodyParts = function(parts)
         Settings.BodyParts = parts
         updatePlayers()
     end,
     
-    -- Nome da parte customizada
     SetCustomPartName = function(name)
         Settings.CustomPartName = name
         updatePlayers()
     end,
     
-    -- Ignorar time próprio
     SetIgnoreOwnTeam = function(state)
         Settings.IgnoreOwnTeam = state
         updatePlayers()
     end,
     
-    -- Verificação de sentado
     SetSitCheck = function(state)
         Settings.SitCheck = state
         updatePlayers()
     end,
     
-    -- Verificação de ForceField
     SetFFCheck = function(state)
         Settings.FFCheck = state
         updatePlayers()
     end,
     
-    -- Colisões
     SetCollisions = function(state)
         Settings.CollisionsEnabled = state
         updatePlayers()
     end,
     
-    -- Ignorar jogador específico
     IgnorePlayer = function(playerName)
         Settings.IgnorePlayers[playerName] = true
         updatePlayers()
     end,
     
-    -- Deixar de ignorar jogador
     UnignorePlayer = function(playerName)
         Settings.IgnorePlayers[playerName] = nil
         updatePlayers()
     end,
     
-    -- Verificar se jogador está ignorado
-    IsPlayerIgnored = function(playerName)
-        return Settings.IgnorePlayers[playerName] == true
-    end,
-    
-    -- Limpar lista de jogadores ignorados
     ClearIgnoredPlayers = function()
         Settings.IgnorePlayers = {}
         updatePlayers()
     end,
     
-    -- Ignorar time específico
     IgnoreTeam = function(teamName)
         Settings.IgnoreTeams[teamName] = true
         updatePlayers()
     end,
     
-    -- Deixar de ignorar time
     UnignoreTeam = function(teamName)
         Settings.IgnoreTeams[teamName] = nil
         updatePlayers()
     end,
     
-    -- Limpar times ignorados
     ClearIgnoredTeams = function()
         Settings.IgnoreTeams = {}
         updatePlayers()
     end,
     
-    -- Obter todas as configurações
     GetSettings = function()
         return Settings
     end,
     
-    -- Forçar atualização
     ForceUpdate = function()
         updatePlayers()
     end,
     
-    -- Obter lista de jogadores disponíveis
     GetPlayers = function()
         local list = {}
         for _, p in pairs(Players:GetPlayers()) do
@@ -477,7 +421,6 @@ local HitboxAPI = {
         return list
     end,
     
-    -- Obter lista de times disponíveis
     GetTeams = function()
         local list = {}
         for _, p in pairs(Players:GetPlayers()) do
@@ -492,11 +435,13 @@ local HitboxAPI = {
         return teams
     end,
     
-    -- Painel de configuração
+    -- ============================================
+    -- PAINEL OTIMIZADO PARA CELULAR
+    -- ============================================
     CreateConfigPanel = function(parent)
         local Panel = Instance.new("Frame")
-        Panel.Size = UDim2.new(0, 280, 0, 400)
-        Panel.Position = UDim2.new(0.5, -140, 0.5, -200)
+        Panel.Size = UDim2.new(0, 280, 0, 380)
+        Panel.Position = UDim2.new(0.5, -140, 0.5, -190)
         Panel.BackgroundColor3 = Color3.fromRGB(25, 25, 35)
         Panel.BorderSizePixel = 0
         Panel.Visible = false
@@ -507,88 +452,92 @@ local HitboxAPI = {
         
         Instance.new("UICorner", Panel).CornerRadius = UDim.new(0, 10)
         
-        -- Barra de título
+        -- Título
         local TitleBar = Instance.new("Frame")
-        TitleBar.Size = UDim2.new(1, 0, 0, 30)
+        TitleBar.Size = UDim2.new(1, 0, 0, 35)
         TitleBar.BackgroundColor3 = Color3.fromRGB(35, 35, 45)
         TitleBar.ZIndex = 1001
         TitleBar.Parent = Panel
+        Instance.new("UICorner", TitleBar).CornerRadius = UDim.new(0, 10)
         
         local Title = Instance.new("TextLabel")
-        Title.Size = UDim2.new(1, -30, 1, 0)
+        Title.Size = UDim2.new(1, -40, 1, 0)
         Title.Position = UDim2.new(0, 12, 0, 0)
         Title.BackgroundTransparency = 1
         Title.Text = "🎯 Hitbox Extender"
         Title.TextColor3 = Color3.fromRGB(255, 255, 255)
         Title.Font = Enum.Font.GothamBold
-        Title.TextSize = 13
+        Title.TextSize = 14
         Title.TextXAlignment = Enum.TextXAlignment.Left
         Title.ZIndex = 1002
         Title.Parent = TitleBar
         
         local Close = Instance.new("TextButton")
-        Close.Size = UDim2.new(0, 22, 0, 22)
-        Close.Position = UDim2.new(1, -26, 0, 4)
+        Close.Size = UDim2.new(0, 26, 0, 26)
+        Close.Position = UDim2.new(1, -30, 0, 4)
         Close.BackgroundColor3 = Color3.fromRGB(200, 50, 50)
         Close.Text = "✕"
         Close.TextColor3 = Color3.fromRGB(255, 255, 255)
         Close.Font = Enum.Font.GothamBold
-        Close.TextSize = 11
+        Close.TextSize = 12
         Close.ZIndex = 1002
         Close.Parent = TitleBar
+        Instance.new("UICorner", Close).CornerRadius = UDim.new(0, 13)
         Close.MouseButton1Click:Connect(function()
             Panel.Visible = false
         end)
         
         -- Scroll
         local Scroll = Instance.new("ScrollingFrame")
-        Scroll.Size = UDim2.new(1, -16, 1, -40)
-        Scroll.Position = UDim2.new(0, 8, 0, 35)
+        Scroll.Size = UDim2.new(1, -16, 1, -45)
+        Scroll.Position = UDim2.new(0, 8, 0, 40)
         Scroll.BackgroundTransparency = 1
-        Scroll.ScrollBarThickness = 3
+        Scroll.ScrollBarThickness = 4
         Scroll.ScrollBarImageColor3 = Color3.fromRGB(100, 200, 255)
         Scroll.ZIndex = 1001
         Scroll.Parent = Panel
         
         local List = Instance.new("UIListLayout")
-        List.Padding = UDim.new(0, 5)
+        List.Padding = UDim.new(0, 6)
         List.Parent = Scroll
         List:GetPropertyChangedSignal("AbsoluteContentSize"):Connect(function()
             Scroll.CanvasSize = UDim2.new(0, 0, 0, List.AbsoluteContentSize.Y + 10)
         end)
         
-        -- Helper: Toggle
+        -- ============================================
+        -- HELPER: Toggle (funciona em mobile)
+        -- ============================================
         local function AddToggle(name, default, callback)
             local Frame = Instance.new("Frame")
-            Frame.Size = UDim2.new(1, 0, 0, 35)
+            Frame.Size = UDim2.new(1, 0, 0, 40)
             Frame.BackgroundColor3 = Color3.fromRGB(40, 40, 50)
             Frame.ZIndex = 1002
             Frame.Parent = Scroll
             Instance.new("UICorner", Frame).CornerRadius = UDim.new(0, 6)
             
             local Label = Instance.new("TextLabel")
-            Label.Size = UDim2.new(1, -50, 1, 0)
-            Label.Position = UDim2.new(0, 8, 0, 0)
+            Label.Size = UDim2.new(1, -55, 1, 0)
+            Label.Position = UDim2.new(0, 10, 0, 0)
             Label.BackgroundTransparency = 1
             Label.Text = name
             Label.TextColor3 = Color3.fromRGB(255, 255, 255)
             Label.Font = Enum.Font.Gotham
-            Label.TextSize = 11
+            Label.TextSize = 12
             Label.TextXAlignment = Enum.TextXAlignment.Left
             Label.ZIndex = 1003
             Label.Parent = Frame
             
             local Btn = Instance.new("TextButton")
-            Btn.Size = UDim2.new(0, 42, 0, 20)
-            Btn.Position = UDim2.new(1, -48, 0.5, -10)
+            Btn.Size = UDim2.new(0, 48, 0, 24)
+            Btn.Position = UDim2.new(1, -54, 0.5, -12)
             Btn.Text = default and "ON" or "OFF"
             Btn.TextColor3 = Color3.fromRGB(255, 255, 255)
             Btn.BackgroundColor3 = default and Color3.fromRGB(0, 200, 100) or Color3.fromRGB(70, 70, 70)
             Btn.Font = Enum.Font.GothamBold
-            Btn.TextSize = 10
+            Btn.TextSize = 11
             Btn.ZIndex = 1003
             Btn.Parent = Frame
-            Instance.new("UICorner", Btn).CornerRadius = UDim.new(0, 4)
+            Instance.new("UICorner", Btn).CornerRadius = UDim.new(0, 5)
             
             local active = default
             Btn.MouseButton1Click:Connect(function()
@@ -597,10 +546,22 @@ local HitboxAPI = {
                 Btn.BackgroundColor3 = active and Color3.fromRGB(0, 200, 100) or Color3.fromRGB(70, 70, 70)
                 callback(active)
             end)
+            
+            -- Suporte a toque (mobile)
+            Btn.TouchTap:Connect(function()
+                active = not active
+                Btn.Text = active and "ON" or "OFF"
+                Btn.BackgroundColor3 = active and Color3.fromRGB(0, 200, 100) or Color3.fromRGB(70, 70, 70)
+                callback(active)
+            end)
         end
         
-        -- Helper: Slider
-        local function AddSlider(name, min, max, default, callback)
+        -- ============================================
+        -- HELPER: Slider com botões +/- (MOBILE)
+        -- ============================================
+        local function AddSlider(name, min, max, default, step, callback)
+            local step = step or 1
+            
             local Frame = Instance.new("Frame")
             Frame.Size = UDim2.new(1, 0, 0, 50)
             Frame.BackgroundColor3 = Color3.fromRGB(40, 40, 50)
@@ -608,66 +569,107 @@ local HitboxAPI = {
             Frame.Parent = Scroll
             Instance.new("UICorner", Frame).CornerRadius = UDim.new(0, 6)
             
+            -- Label com valor
             local Label = Instance.new("TextLabel")
-            Label.Size = UDim2.new(1, -10, 0, 20)
-            Label.Position = UDim2.new(0, 8, 0, 3)
+            Label.Size = UDim2.new(1, -110, 1, 0)
+            Label.Position = UDim2.new(0, 10, 0, 0)
             Label.BackgroundTransparency = 1
             Label.Text = name .. ": " .. default
             Label.TextColor3 = Color3.fromRGB(200, 200, 200)
             Label.Font = Enum.Font.Gotham
-            Label.TextSize = 10
+            Label.TextSize = 12
             Label.TextXAlignment = Enum.TextXAlignment.Left
             Label.ZIndex = 1003
             Label.Parent = Frame
             
-            local Bar = Instance.new("Frame")
-            Bar.Size = UDim2.new(1, -20, 0, 8)
-            Bar.Position = UDim2.new(0, 10, 0, 35)
-            Bar.BackgroundColor3 = Color3.fromRGB(60, 60, 70)
-            Bar.ZIndex = 1003
-            Bar.Parent = Frame
-            Instance.new("UICorner", Bar).CornerRadius = UDim.new(0, 4)
+            local currentValue = default
             
-            local Fill = Instance.new("Frame")
-            Fill.Size = UDim2.new((default - min) / (max - min), 0, 1, 0)
-            Fill.BackgroundColor3 = Color3.fromRGB(0, 200, 100)
-            Fill.ZIndex = 1004
-            Fill.Parent = Bar
-            Instance.new("UICorner", Fill).CornerRadius = UDim.new(0, 4)
+            -- Botão -
+            local MinusBtn = Instance.new("TextButton")
+            MinusBtn.Size = UDim2.new(0, 30, 0, 30)
+            MinusBtn.Position = UDim2.new(1, -100, 0.5, -15)
+            MinusBtn.BackgroundColor3 = Color3.fromRGB(200, 60, 60)
+            MinusBtn.Text = "−"
+            MinusBtn.TextColor3 = Color3.fromRGB(255, 255, 255)
+            MinusBtn.Font = Enum.Font.GothamBold
+            MinusBtn.TextSize = 18
+            MinusBtn.ZIndex = 1003
+            MinusBtn.Parent = Frame
+            Instance.new("UICorner", MinusBtn).CornerRadius = UDim.new(0, 5)
             
-            local Drag = Instance.new("TextButton")
-            Drag.Size = UDim2.new(1, 0, 2, 0)
-            Drag.Position = UDim2.new(0, 0, 0.5, -8)
-            Drag.BackgroundTransparency = 1
-            Drag.Text = ""
-            Drag.ZIndex = 1005
-            Drag.Parent = Bar
+            -- Botão +
+            local PlusBtn = Instance.new("TextButton")
+            PlusBtn.Size = UDim2.new(0, 30, 0, 30)
+            PlusBtn.Position = UDim2.new(1, -35, 0.5, -15)
+            PlusBtn.BackgroundColor3 = Color3.fromRGB(0, 180, 100)
+            PlusBtn.Text = "+"
+            PlusBtn.TextColor3 = Color3.fromRGB(255, 255, 255)
+            PlusBtn.Font = Enum.Font.GothamBold
+            PlusBtn.TextSize = 18
+            PlusBtn.ZIndex = 1003
+            PlusBtn.Parent = Frame
+            Instance.new("UICorner", PlusBtn).CornerRadius = UDim.new(0, 5)
             
-            local dragging = false
-            Drag.MouseButton1Down:Connect(function()
-                dragging = true
+            local function updateValue(newValue)
+                currentValue = math.clamp(newValue, min, max)
+                Label.Text = name .. ": " .. currentValue
+                callback(currentValue)
+            end
+            
+            -- Clique normal (PC)
+            MinusBtn.MouseButton1Click:Connect(function()
+                updateValue(currentValue - step)
+            end)
+            PlusBtn.MouseButton1Click:Connect(function()
+                updateValue(currentValue + step)
             end)
             
-            game:GetService("UserInputService").InputEnded:Connect(function(input)
-                if input.UserInputType == Enum.UserInputType.MouseButton1 then
-                    dragging = false
-                end
+            -- Toque (Mobile)
+            MinusBtn.TouchTap:Connect(function()
+                updateValue(currentValue - step)
+            end)
+            PlusBtn.TouchTap:Connect(function()
+                updateValue(currentValue + step)
             end)
             
-            game:GetService("UserInputService").InputChanged:Connect(function(input)
-                if dragging and input.UserInputType == Enum.UserInputType.MouseMovement then
-                    local mousePos = game:GetService("UserInputService"):GetMouseLocation()
-                    local percent = math.clamp((mousePos.X - Bar.AbsolutePosition.X) / Bar.AbsoluteSize.X, 0, 1)
-                    local value = math.floor((min + (max - min) * percent) * 10) / 10
-                    Fill.Size = UDim2.new(percent, 0, 1, 0)
-                    Label.Text = name .. ": " .. value
-                    callback(value)
+            -- Segurar para ajuste rápido (funciona em ambos)
+            local holding = nil
+            local holdSpeed = 0.15
+            
+            MinusBtn.MouseButton1Down:Connect(function()
+                holding = "minus"
+                task.spawn(function()
+                    while holding == "minus" do
+                        updateValue(currentValue - step)
+                        task.wait(holdSpeed)
+                        holdSpeed = math.max(0.03, holdSpeed * 0.9)
+                    end
+                    holdSpeed = 0.15
+                end)
+            end)
+            
+            PlusBtn.MouseButton1Down:Connect(function()
+                holding = "plus"
+                task.spawn(function()
+                    while holding == "plus" do
+                        updateValue(currentValue + step)
+                        task.wait(holdSpeed)
+                        holdSpeed = math.max(0.03, holdSpeed * 0.9)
+                    end
+                    holdSpeed = 0.15
+                end)
+            end)
+            
+            UserInputService.InputEnded:Connect(function(input)
+                if input.UserInputType == Enum.UserInputType.MouseButton1 or 
+                   input.UserInputType == Enum.UserInputType.Touch then
+                    holding = nil
                 end
             end)
         end
         
         -- ============================================
-        -- TÍTULO DA SEÇÃO
+        -- SEÇÕES
         -- ============================================
         local function AddSection(text)
             local Section = Instance.new("TextLabel")
@@ -683,25 +685,23 @@ local HitboxAPI = {
         end
         
         -- ============================================
-        -- CONTEÚDO DO PAINEL
+        -- CONTEÚDO
         -- ============================================
         
-        -- PRINCIPAL
         AddSection("🎯 PRINCIPAL")
         AddToggle("Ativar Hitbox", Settings.Enabled, function(state)
             HitboxAPI.Toggle(state)
         end)
-        AddSlider("Tamanho", 2, 100, Settings.Size, function(value)
+        AddSlider("Tamanho", 2, 100, Settings.Size, 2, function(value)
             HitboxAPI.SetSize(value)
         end)
-        AddSlider("Transparência", 0, 1, Settings.Transparency, function(value)
+        AddSlider("Transparência", 0, 1, Settings.Transparency, 0.1, function(value)
             HitboxAPI.SetTransparency(value)
         end)
         
-        -- PARTES DO CORPO
         AddSection("🦴 PARTES DO CORPO")
         local PartsFrame = Instance.new("Frame")
-        PartsFrame.Size = UDim2.new(1, 0, 0, 125)
+        PartsFrame.Size = UDim2.new(1, 0, 0, 130)
         PartsFrame.BackgroundColor3 = Color3.fromRGB(40, 40, 50)
         PartsFrame.ZIndex = 1002
         PartsFrame.Parent = Scroll
@@ -718,12 +718,12 @@ local HitboxAPI = {
             local row = math.floor((i - 1) / 2)
             
             local PartToggle = Instance.new("Frame")
-            PartToggle.Size = UDim2.new(0.45, -8, 0, 22)
-            PartToggle.Position = UDim2.new(col == 0 and 0 or 0.5, col == 0 and 8 or 4, 0, 5 + row * 28)
+            PartToggle.Size = UDim2.new(0.45, -8, 0, 26)
+            PartToggle.Position = UDim2.new(col == 0 and 0 or 0.5, col == 0 and 8 or 4, 0, 5 + row * 32)
             PartToggle.BackgroundColor3 = selectedParts[partName] and Color3.fromRGB(0, 180, 100) or Color3.fromRGB(50, 50, 60)
             PartToggle.ZIndex = 1003
             PartToggle.Parent = PartsFrame
-            Instance.new("UICorner", PartToggle).CornerRadius = UDim.new(0, 4)
+            Instance.new("UICorner", PartToggle).CornerRadius = UDim.new(0, 5)
             
             local PartBtn = Instance.new("TextButton")
             PartBtn.Size = UDim2.new(1, 0, 1, 0)
@@ -731,7 +731,7 @@ local HitboxAPI = {
             PartBtn.Text = partName
             PartBtn.TextColor3 = Color3.fromRGB(255, 255, 255)
             PartBtn.Font = Enum.Font.Gotham
-            PartBtn.TextSize = 9
+            PartBtn.TextSize = 10
             PartBtn.ZIndex = 1004
             PartBtn.Parent = PartToggle
             
@@ -754,9 +754,28 @@ local HitboxAPI = {
                 end
                 HitboxAPI.SetBodyParts(partsList)
             end)
+            
+            PartBtn.TouchTap:Connect(function()
+                if selectedParts[partName] then
+                    selectedParts[partName] = nil
+                    PartToggle.BackgroundColor3 = Color3.fromRGB(50, 50, 60)
+                else
+                    selectedParts[partName] = true
+                    PartToggle.BackgroundColor3 = Color3.fromRGB(0, 180, 100)
+                end
+                
+                local partsList = {}
+                for k, _ in pairs(selectedParts) do
+                    table.insert(partsList, k)
+                end
+                if #partsList == 0 then
+                    partsList = {"HumanoidRootPart"}
+                    selectedParts["HumanoidRootPart"] = true
+                end
+                HitboxAPI.SetBodyParts(partsList)
+            end)
         end
         
-        -- IGNORAR
         AddSection("🚫 IGNORAR")
         AddToggle("Ignorar Aliados", Settings.IgnoreOwnTeam, function(state)
             HitboxAPI.SetIgnoreOwnTeam(state)
@@ -768,7 +787,6 @@ local HitboxAPI = {
             HitboxAPI.SetFFCheck(state)
         end)
         
-        -- COLISÕES
         AddSection("💥 COLISÕES")
         AddToggle("Ativar Colisões", Settings.CollisionsEnabled, function(state)
             HitboxAPI.SetCollisions(state)
@@ -778,6 +796,5 @@ local HitboxAPI = {
     end
 }
 
--- Finaliza
 getgenv().HitboxPluginLoaded = true
 return HitboxAPI
