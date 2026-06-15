@@ -1,171 +1,494 @@
--- ============================================
--- CARD DO HITBOX NA ABA PLUGINS
--- ============================================
+-- Hitbox Extender Plugin para LRMODS Combat
+-- Versão Final Limpa
 
--- Carrega o Hitbox Plugin
-local HitboxPlugin = nil
-local HitboxPanel = nil
-local HitboxFrame = nil
-local HitboxStatus = nil
-local HitboxBorder = nil
+if getgenv().HitboxPluginLoaded ~= nil then
+    return
+end
+getgenv().HitboxPluginLoaded = false
 
--- Frame principal do card
-HitboxFrame = Instance.new("Frame")
-HitboxFrame.Size = UDim2.new(1, 0, 0, 40)
-HitboxFrame.BackgroundColor3 = Color3.fromRGB(35, 35, 45)
-HitboxFrame.BorderSizePixel = 1
-HitboxFrame.BorderColor3 = Color3.fromRGB(60, 60, 70)
-HitboxFrame.Parent = PluginsScroll
+if not game:IsLoaded() then
+    game.Loaded:Wait()
+end
 
-local HitboxCorner = Instance.new("UICorner")
-HitboxCorner.CornerRadius = UDim.new(0, 8)
-HitboxCorner.Parent = HitboxFrame
+if not getgenv().MTAPIMutex then
+    pcall(function()
+        loadstring(game:HttpGet("https://raw.githubusercontent.com/RectangularObject/MT-Api-v2/main/__source/mt-api%20v2.lua", true))()
+    end)
+end
 
--- Ícone
-local HitboxIcon = Instance.new("TextLabel")
-HitboxIcon.Size = UDim2.new(0, 30, 1, 0)
-HitboxIcon.Position = UDim2.new(0, 5, 0, 0)
-HitboxIcon.BackgroundTransparency = 1
-HitboxIcon.Text = "🎯"
-HitboxIcon.TextSize = 18
-HitboxIcon.ZIndex = 2
-HitboxIcon.Parent = HitboxFrame
+local Settings = {
+    Enabled = false,
+    Size = 10,
+    Transparency = 0.5,
+    BodyParts = {"HumanoidRootPart"},
+    CustomPartName = "HeadHB",
+    SitCheck = true,
+    FFCheck = true,
+    IgnoreOwnTeam = true,
+    IgnorePlayers = {},
+    IgnoreTeams = {},
+    CollisionsEnabled = false
+}
 
--- Nome
-local HitboxName = Instance.new("TextLabel")
-HitboxName.Size = UDim2.new(1, -130, 1, 0)
-HitboxName.Position = UDim2.new(0, 38, 0, 0)
-HitboxName.BackgroundTransparency = 1
-HitboxName.Text = "Hitbox Extender"
-HitboxName.TextColor3 = Color3.fromRGB(255, 255, 255)
-HitboxName.Font = Enum.Font.GothamBold
-HitboxName.TextSize = 12
-HitboxName.TextXAlignment = Enum.TextXAlignment.Left
-HitboxName.ZIndex = 2
-HitboxName.Parent = HitboxFrame
+local Teams = game:GetService("Teams")
+local Players = game:GetService("Players")
+local Workspace = game:GetService("Workspace")
+local ReplicatedStorage = game:GetService("ReplicatedStorage")
+local lPlayer = Players.LocalPlayer
+local players = {}
+local teamModule = nil
 
--- Status (ON/OFF)
-HitboxStatus = Instance.new("TextLabel")
-HitboxStatus.Size = UDim2.new(0, 40, 0, 20)
-HitboxStatus.Position = UDim2.new(1, -90, 0.5, -10)
-HitboxStatus.BackgroundColor3 = Color3.fromRGB(50, 50, 60)
-HitboxStatus.BackgroundTransparency = 0
-HitboxStatus.Text = "OFF"
-HitboxStatus.TextColor3 = Color3.fromRGB(255, 100, 100)
-HitboxStatus.Font = Enum.Font.GothamBold
-HitboxStatus.TextSize = 10
-HitboxStatus.ZIndex = 2
-HitboxStatus.Parent = HitboxFrame
-
-local StatusCorner = Instance.new("UICorner")
-StatusCorner.CornerRadius = UDim.new(0, 4)
-StatusCorner.Parent = HitboxStatus
-
--- Botão Configurar
-local HitboxConfigBtn = Instance.new("TextButton")
-HitboxConfigBtn.Size = UDim2.new(0, 35, 0, 28)
-HitboxConfigBtn.Position = UDim2.new(1, -42, 0.5, -14)
-HitboxConfigBtn.BackgroundColor3 = Color3.fromRGB(60, 60, 70)
-HitboxConfigBtn.Text = "⚙️"
-HitboxConfigBtn.TextColor3 = Color3.fromRGB(255, 255, 255)
-HitboxConfigBtn.Font = Enum.Font.GothamBold
-HitboxConfigBtn.TextSize = 14
-HitboxConfigBtn.ZIndex = 2
-HitboxConfigBtn.Parent = HitboxFrame
-
-local ConfigCorner = Instance.new("UICorner")
-ConfigCorner.CornerRadius = UDim.new(0, 6)
-ConfigCorner.Parent = HitboxConfigBtn
-
--- Efeito hover no botão configurar
-HitboxConfigBtn.MouseEnter:Connect(function()
-    HitboxConfigBtn.BackgroundColor3 = Color3.fromRGB(80, 80, 90)
-end)
-
-HitboxConfigBtn.MouseLeave:Connect(function()
-    HitboxConfigBtn.BackgroundColor3 = Color3.fromRGB(60, 60, 70)
-end)
-
--- Efeito hover no card inteiro
-HitboxFrame.MouseEnter:Connect(function()
-    if HitboxStatus.Text == "OFF" then
-        HitboxFrame.BackgroundColor3 = Color3.fromRGB(40, 40, 50)
-    end
-end)
-
-HitboxFrame.MouseLeave:Connect(function()
-    if HitboxStatus.Text == "OFF" then
-        HitboxFrame.BackgroundColor3 = Color3.fromRGB(35, 35, 45)
-    end
-end)
-
--- Função para atualizar o status visual
-local function UpdateHitboxStatus()
-    if HitboxPlugin and HitboxStatus and HitboxFrame then
-        local settings = HitboxPlugin.GetSettings()
-        local isOn = settings.Enabled
-        
-        -- Atualiza texto e cor do status
-        HitboxStatus.Text = isOn and "ON" or "OFF"
-        HitboxStatus.TextColor3 = isOn and Color3.fromRGB(0, 255, 100) or Color3.fromRGB(255, 100, 100)
-        HitboxStatus.BackgroundColor3 = isOn and Color3.fromRGB(0, 180, 100, 0.3) or Color3.fromRGB(50, 50, 60)
-        
-        -- Atualiza borda do card
-        HitboxFrame.BorderColor3 = isOn and Color3.fromRGB(0, 255, 100) or Color3.fromRGB(60, 60, 70)
-        HitboxFrame.BorderSizePixel = isOn and 2 or 1
-        
-        -- Atualiza fundo do card
-        HitboxFrame.BackgroundColor3 = isOn and Color3.fromRGB(30, 50, 35) or Color3.fromRGB(35, 35, 45)
-        
-        -- Atualiza cor do botão configurar
-        HitboxConfigBtn.BackgroundColor3 = isOn and Color3.fromRGB(0, 180, 100) or Color3.fromRGB(60, 60, 70)
+local function updatePlayers()
+    if not getgenv().HitboxPluginLoaded then return end
+    if not Settings.Enabled then return end
+    for _, v in pairs(players) do
+        task.spawn(function()
+            pcall(v.Update, v)
+        end)
     end
 end
 
--- Carrega o plugin
-task.spawn(function()
-    local success, result = pcall(function()
-        return loadstring(game:HttpGet("https://raw.githubusercontent.com/SEU_USUARIO/SEU_REPO/main/hitbox_plugin.lua"))()
-    end)
-    
-    if success and result and result.CreateConfigPanel then
-        HitboxPlugin = result
-        
-        -- Cria o painel de configuração (invisível)
-        HitboxPanel = HitboxPlugin.CreateConfigPanel(MainGui)
-        
-        -- Atualiza status inicial
-        UpdateHitboxStatus()
-        
-        -- Loop de atualização do status
-        task.spawn(function()
-            while task.wait(0.3) do
-                UpdateHitboxStatus()
-            end
-        end)
-    else
-        -- Mostra erro no card
-        HitboxStatus.Text = "ERR"
-        HitboxStatus.TextColor3 = Color3.fromRGB(255, 80, 80)
-        HitboxFrame.BorderColor3 = Color3.fromRGB(255, 50, 50)
-        HitboxConfigBtn.BackgroundColor3 = Color3.fromRGB(150, 50, 50)
+pcall(function()
+    if game.GameId == 504234221 then
+        teamModule = require(ReplicatedStorage.Scripts.Modules.PlayerModule)
+    end
+    if game.GameId == 1934496708 then
+        teamModule = require(Workspace:WaitForChild("Teams"))
     end
 end)
 
--- Clique no card inteiro alterna ON/OFF
-HitboxFrame.InputBegan:Connect(function(input)
-    if input.UserInputType == Enum.UserInputType.MouseButton1 then
-        if HitboxPlugin then
-            local settings = HitboxPlugin.GetSettings()
-            HitboxPlugin.Toggle(not settings.Enabled)
-            UpdateHitboxStatus()
+local function addPlayer(player)
+    players[player] = {}
+    local playerIdx = players[player]
+    local playerChar = player.Character
+    local defaultProperties = {}
+
+    local function isTeammate()
+        if game.GameId == 718936923 then
+            if not lPlayer.Character or not playerChar or not playerChar:FindFirstChild("HumanoidRootPart") then return true end
+            return lPlayer.Character.HumanoidRootPart.Color == playerChar.HumanoidRootPart.Color
+        elseif game.PlaceId == 633284182 then
+            if not player:FindFirstChild("PlayerData") or not player.PlayerData:FindFirstChild("TeamValue") then return true end
+            return lPlayer.PlayerData.TeamValue.Value == player.PlayerData.TeamValue.Value
+        elseif game.PlaceId == 2029250188 then
+            if not lPlayer.Character or not playerChar then return true end
+            return lPlayer.Character.Parent == playerChar.Parent
+        elseif game.PlaceId == 2978450615 then
+            return getrenv()._G.PlayerProfiles.Data[lPlayer.Name].Team == getrenv()._G.PlayerProfiles.Data[player.Name].Team
+        elseif game.GameId == 1934496708 then
+            if Workspace.FriendlyFire.Value then return false end
+            return (not player.Team or player.Team.Name == "LOBBY" or lPlayer.Team.Name == "LOBBY" or player.Team.Name == "Admin" or lPlayer.Team == player.Team) or
+            teamModule[lPlayer.Team.Name] == teamModule[player.Team.Name] or
+            ((teamModule[lPlayer.Team.Name] == "CI" and teamModule[player.Team.Name] == "CD") or
+            (teamModule[player.Team.Name] == "CI" and teamModule[lPlayer.Team.Name] == "CD"))
+        elseif game.PlaceId == 2622527242 then
+            if not player.Team or player.Team.Name == "Intro" or player.Team.Name == "Spectator" or player.Team.Name == "Not Playing" or lPlayer.Team == player.Team then return true end
+            local function classifyTeam(teamName)
+                if teamName == "Class-D Personnel" or teamName == "Chaos Insurgency" then return "Chads" end
+                if teamName == "Facility Personnel" or teamName == "Security Department" or teamName == "Mobile Task Force" then return "Crayon Eaters" end
+                if teamName == "SCPs" or teamName == "Serpent's Hand" then return "Menaces to Society" end
+                if teamName == "Global Occult Coalition" then return "Who?" end
+                if teamName == "Unusual Incidents Unit" then return "Who2?" end
+                return nil
+            end
+            local selfTeam = classifyTeam(lPlayer.Team.Name)
+            local playerTeam = classifyTeam(player.Team.Name)
+            if selfTeam == "Who2?" or playerTeam == "Who2?" then
+                if selfTeam == "Crayon Eaters" or playerTeam == "Crayon Eaters" or selfTeam == "Who?" or playerTeam == "Who?" then
+                    return true
+                end
+            end
+            return selfTeam == playerTeam
+        elseif game.PlaceId == 8770868695 then
+            if not lPlayer.Character or not playerChar or not player.Team or player.Team.Name == "Dead" or player.Team.Name == "Inactive" then return true end
+            return lPlayer.Character.Parent == playerChar.Parent
+        elseif game.PlaceId == 5884786982 then
+            if not lPlayer.Character or not playerChar then return true end
+            return lPlayer.Character.name ~= "Killer" and playerChar.Name ~= "Killer"
+        elseif game.GameId == 2162282815 then
+            if not player:FindFirstChild("SelectedTeam") then return true end
+            return player.SelectedTeam.Value == lPlayer.SelectedTeam.Value
+        elseif game.PlaceId == 1240644540 then
+            if not teamModule or not teamModule.IsPlayerSurvivor then return true end
+            return teamModule.IsPlayerSurvivor(nil, player) == true and teamModule.IsPlayerSurvivor(nil, lPlayer) == true
+        elseif game.PlaceId == 10236714118 then
+            if not player:FindFirstChild("PlayerData") or not player.PlayerData:FindFirstChild("Team") then return true end
+            return lPlayer.PlayerData.Team.Value == player.PlayerData.Team.Value
+        end
+        return lPlayer.Team == player.Team
+    end
+
+    local function isDead()
+        if not playerChar then return true end
+        local humanoid = playerChar:FindFirstChildWhichIsA("Humanoid")
+        if game.PlaceId == 6172932937 then
+            return player.ragdolled.Value
+        elseif game.GameId == 718936923 then
+            return playerChar:FindFirstChild("Dead") ~= nil
+        end
+        return humanoid and humanoid:GetState() == Enum.HumanoidStateType.Dead
+    end
+
+    local function isSitting()
+        local humanoid = playerChar:FindFirstChildWhichIsA("Humanoid")
+        return Settings.SitCheck and humanoid and humanoid.Sit == true
+    end
+
+    local function isFFed()
+        if not playerChar then return false end
+        if game.PlaceId == 4991214437 or game.PlaceId == 6652350934 then
+            return playerChar.Head.Material == Enum.Material.ForceField
+        end
+        local ff = playerChar:FindFirstChildWhichIsA("ForceField")
+        return Settings.FFCheck and ff and ff.Visible == true
+    end
+
+    local function isIgnored()
+        if not playerChar then return true end
+        return (Settings.IgnoreOwnTeam and isTeammate()) or
+               (Settings.IgnorePlayers[player.Name]) or
+               (player.Team and Settings.IgnoreTeams[player.Team.Name])
+    end
+
+    local debounce = false
+    local function setup(part)
+        defaultProperties[part.Name] = {
+            Size = part.Size,
+            Transparency = part.Transparency,
+            Massless = part.Massless,
+            CanCollide = part.CanCollide
+        }
+        
+        local props = defaultProperties[part.Name]
+        local getSizeHook = part:AddGetHook("Size", props.Size)
+        local getTransparencyHook = part:AddGetHook("Transparency", props.Transparency)
+        local getMasslessHook = part:AddGetHook("Massless", props.Massless)
+        local getCanCollideHook = part:AddGetHook("CanCollide", props.CanCollide)
+        
+        local setSizeHook = part:AddSetHook("Size", function(_, value)
+            props.Size = value
+            getSizeHook:Modify("Size", props.Size)
+            if Settings.Enabled then
+                return Vector3.new(Settings.Size, Settings.Size, Settings.Size)
+            end
+            return props.Size
+        end)
+        
+        local setTransparencyHook = part:AddSetHook("Transparency", function(_, value)
+            props.Transparency = value
+            getTransparencyHook:Modify("Transparency", props.Transparency)
+            if Settings.Enabled then
+                return Settings.Transparency
+            end
+            return props.Transparency
+        end)
+        
+        local setMasslessHook = part:AddSetHook("Massless", function(_, value)
+            props.Massless = value
+            getMasslessHook:Modify("Massless", props.Massless)
+            if Settings.Enabled and part.Name ~= "HumanoidRootPart" then
+                return true
+            end
+            return props.Massless
+        end)
+        
+        local setCanCollideHook = part:AddSetHook("CanCollide", function(_, value)
+            props.CanCollide = value
+            getCanCollideHook:Modify("CanCollide", props.CanCollide)
+            if Settings.Enabled and not Settings.CollisionsEnabled then
+                if part.Name == "Head" or part.Name == "HumanoidRootPart" then
+                    return false
+                end
+            end
+            return props.CanCollide
+        end)
+        
+        part.Destroying:Connect(function()
+            getSizeHook:Remove()
+            getTransparencyHook:Remove()
+            getMasslessHook:Remove()
+            getCanCollideHook:Remove()
+            setSizeHook:Remove()
+            setTransparencyHook:Remove()
+            setMasslessHook:Remove()
+            setCanCollideHook:Remove()
+        end)
+    end
+
+    local function isActive(part)
+        local name = part.Name
+        for _, partName in pairs(Settings.BodyParts) do
+            if string.match(name, partName) or 
+               (partName == "Custom Part" and string.match(name, Settings.CustomPartName)) or
+               (partName == "Left Arm" and string.match(name, "Left") and (string.match(name, "Arm") or string.match(name, "Hand"))) or
+               (partName == "Right Arm" and string.match(name, "Right") and (string.match(name, "Arm") or string.match(name, "Hand"))) or
+               (partName == "Left Leg" and string.match(name, "Left") and (string.match(name, "Leg") or string.match(name, "Foot"))) or
+               (partName == "Right Leg" and string.match(name, "Right") and (string.match(name, "Leg") or string.match(name, "Foot"))) then
+                return true
+            end
+        end
+        return false
+    end
+
+    local function resize(part)
+        if not defaultProperties[part.Name] then
+            setup(part)
+        end
+        
+        if Settings.Enabled and isActive(part) and not isIgnored() and not isSitting() and not isFFed() and not isDead() then
+            part.Massless = part.Name ~= "HumanoidRootPart"
+            part.CanCollide = Settings.CollisionsEnabled and defaultProperties[part.Name].CanCollide or false
+            part.Size = Vector3.new(Settings.Size, Settings.Size, Settings.Size)
+            part.Transparency = Settings.Transparency
+        else
+            if defaultProperties[part.Name] then
+                part.Massless = defaultProperties[part.Name].Massless
+                part.CanCollide = defaultProperties[part.Name].CanCollide
+                part.Size = defaultProperties[part.Name].Size
+                part.Transparency = defaultProperties[part.Name].Transparency
+            end
         end
     end
-end)
 
--- Botão configurar abre o painel
-HitboxConfigBtn.MouseButton1Click:Connect(function()
-    if HitboxPanel then
-        HitboxPanel.Visible = not HitboxPanel.Visible
+    function playerIdx:Update()
+        if not playerChar then return end
+        debounce = true
+        for _, v in pairs(playerChar:GetChildren()) do
+            if v:IsA("BasePart") then
+                resize(v)
+            end
+        end
+        debounce = false
+    end
+
+    player.CharacterAdded:Connect(function(character)
+        playerChar = character
+        defaultProperties = {}
+        task.wait(0.5)
+        playerIdx:Update()
+        
+        local humanoid = character:FindFirstChildWhichIsA("Humanoid")
+        if humanoid then
+            humanoid.StateChanged:Connect(function(_, newState)
+                if newState == Enum.HumanoidStateType.Dead then
+                    playerIdx:Update()
+                end
+            end)
+        end
+    end)
+    
+    player.CharacterRemoving:Connect(function()
+        defaultProperties = {}
+    end)
+    
+    player:GetPropertyChangedSignal("Team"):Connect(function()
+        playerIdx:Update()
+    end)
+end
+
+local function removePlayer(player)
+    players[player] = nil
+end
+
+for _, player in pairs(Players:GetPlayers()) do
+    if player ~= lPlayer then
+        addPlayer(player)
+    end
+end
+
+Players.PlayerAdded:Connect(function(player)
+    if player ~= lPlayer then
+        addPlayer(player)
     end
 end)
+
+Players.PlayerRemoving:Connect(function(player)
+    removePlayer(player)
+end)
+
+lPlayer:GetAttributeChangedSignal("Team"):Connect(updatePlayers)
+lPlayer.CharacterAdded:Connect(function()
+    task.wait(0.5)
+    updatePlayers()
+end)
+
+task.spawn(function()
+    while getgenv().HitboxPluginLoaded do
+        if Settings.Enabled then
+            updatePlayers()
+        end
+        task.wait(2)
+    end
+end)
+
+local HitboxAPI = {
+    Toggle = function(state)
+        Settings.Enabled = state
+        updatePlayers()
+    end,
+    
+    SetSize = function(size)
+        Settings.Size = math.clamp(size, 2, 100)
+        updatePlayers()
+    end,
+    
+    SetTransparency = function(transparency)
+        Settings.Transparency = math.clamp(transparency, 0, 1)
+        updatePlayers()
+    end,
+    
+    SetBodyParts = function(parts)
+        Settings.BodyParts = parts
+        updatePlayers()
+    end,
+    
+    SetIgnoreOwnTeam = function(state)
+        Settings.IgnoreOwnTeam = state
+        updatePlayers()
+    end,
+    
+    SetCollisions = function(state)
+        Settings.CollisionsEnabled = state
+        updatePlayers()
+    end,
+    
+    GetSettings = function()
+        return Settings
+    end,
+    
+    CreateConfigPanel = function(parent)
+        local Panel = Instance.new("Frame")
+        Panel.Size = UDim2.new(0, 250, 0, 320)
+        Panel.Position = UDim2.new(0.5, -125, 0.5, -160)
+        Panel.BackgroundColor3 = Color3.fromRGB(25, 25, 35)
+        Panel.BorderSizePixel = 0
+        Panel.Visible = false
+        Panel.ZIndex = 1000
+        Panel.Active = true
+        Panel.Draggable = true
+        Panel.Parent = parent
+        
+        Instance.new("UICorner", Panel).CornerRadius = UDim.new(0, 10)
+        
+        local TitleBar = Instance.new("Frame")
+        TitleBar.Size = UDim2.new(1, 0, 0, 30)
+        TitleBar.BackgroundColor3 = Color3.fromRGB(35, 35, 45)
+        TitleBar.ZIndex = 1001
+        TitleBar.Parent = Panel
+        Instance.new("UICorner", TitleBar).CornerRadius = UDim.new(0, 10)
+        
+        local Title = Instance.new("TextLabel")
+        Title.Size = UDim2.new(1, -30, 1, 0)
+        Title.Position = UDim2.new(0, 12, 0, 0)
+        Title.BackgroundTransparency = 1
+        Title.Text = "🎯 Hitbox Extender"
+        Title.TextColor3 = Color3.fromRGB(255, 255, 255)
+        Title.Font = Enum.Font.GothamBold
+        Title.TextSize = 13
+        Title.TextXAlignment = Enum.TextXAlignment.Left
+        Title.ZIndex = 1002
+        Title.Parent = TitleBar
+        
+        local Close = Instance.new("TextButton")
+        Close.Size = UDim2.new(0, 22, 0, 22)
+        Close.Position = UDim2.new(1, -26, 0, 4)
+        Close.BackgroundColor3 = Color3.fromRGB(200, 50, 50)
+        Close.Text = "✕"
+        Close.TextColor3 = Color3.fromRGB(255, 255, 255)
+        Close.Font = Enum.Font.GothamBold
+        Close.TextSize = 11
+        Close.ZIndex = 1002
+        Close.Parent = TitleBar
+        Instance.new("UICorner", Close).CornerRadius = UDim.new(0, 11)
+        Close.MouseButton1Click:Connect(function()
+            Panel.Visible = false
+        end)
+        
+        local Scroll = Instance.new("ScrollingFrame")
+        Scroll.Size = UDim2.new(1, -16, 1, -40)
+        Scroll.Position = UDim2.new(0, 8, 0, 35)
+        Scroll.BackgroundTransparency = 1
+        Scroll.ScrollBarThickness = 3
+        Scroll.ScrollBarImageColor3 = Color3.fromRGB(100, 200, 255)
+        Scroll.ZIndex = 1001
+        Scroll.Parent = Panel
+        
+        local List = Instance.new("UIListLayout")
+        List.Padding = UDim.new(0, 5)
+        List.Parent = Scroll
+        List:GetPropertyChangedSignal("AbsoluteContentSize"):Connect(function()
+            Scroll.CanvasSize = UDim2.new(0, 0, 0, List.AbsoluteContentSize.Y + 10)
+        end)
+        
+        local function AddToggle(name, default, callback)
+            local Frame = Instance.new("Frame")
+            Frame.Size = UDim2.new(1, 0, 0, 35)
+            Frame.BackgroundColor3 = Color3.fromRGB(40, 40, 50)
+            Frame.ZIndex = 1002
+            Frame.Parent = Scroll
+            Instance.new("UICorner", Frame).CornerRadius = UDim.new(0, 6)
+            
+            local Label = Instance.new("TextLabel")
+            Label.Size = UDim2.new(1, -50, 1, 0)
+            Label.Position = UDim2.new(0, 8, 0, 0)
+            Label.BackgroundTransparency = 1
+            Label.Text = name
+            Label.TextColor3 = Color3.fromRGB(255, 255, 255)
+            Label.Font = Enum.Font.Gotham
+            Label.TextSize = 11
+            Label.TextXAlignment = Enum.TextXAlignment.Left
+            Label.ZIndex = 1003
+            Label.Parent = Frame
+            
+            local Btn = Instance.new("TextButton")
+            Btn.Size = UDim2.new(0, 42, 0, 20)
+            Btn.Position = UDim2.new(1, -48, 0.5, -10)
+            Btn.Text = default and "ON" or "OFF"
+            Btn.TextColor3 = Color3.fromRGB(255, 255, 255)
+            Btn.BackgroundColor3 = default and Color3.fromRGB(0, 200, 100) or Color3.fromRGB(70, 70, 70)
+            Btn.Font = Enum.Font.GothamBold
+            Btn.TextSize = 10
+            Btn.ZIndex = 1003
+            Btn.Parent = Frame
+            Instance.new("UICorner", Btn).CornerRadius = UDim.new(0, 4)
+            
+            local active = default
+            Btn.MouseButton1Click:Connect(function()
+                active = not active
+                Btn.Text = active and "ON" or "OFF"
+                Btn.BackgroundColor3 = active and Color3.fromRGB(0, 200, 100) or Color3.fromRGB(70, 70, 70)
+                callback(active)
+            end)
+        end
+        
+        local function AddSlider(name, min, max, default, callback)
+            local Frame = Instance.new("Frame")
+            Frame.Size = UDim2.new(1, 0, 0, 50)
+            Frame.BackgroundColor3 = Color3.fromRGB(40, 40, 50)
+            Frame.ZIndex = 1002
+            Frame.Parent = Scroll
+            Instance.new("UICorner", Frame).CornerRadius = UDim.new(0, 6)
+            
+            local Label = Instance.new("TextLabel")
+            Label.Size = UDim2.new(1, -10, 0, 20)
+            Label.Position = UDim2.new(0, 8, 0, 3)
+            Label.BackgroundTransparency = 1
+            Label.Text = name .. ": " .. default
+            Label.TextColor3 = Color3.fromRGB(200, 200, 200)
+            Label.Font = Enum.Font.Gotham
+            Label.TextSize = 10
+            Label.TextXAlignment = Enum.TextXAlignment.Left
+            Label.ZIndex = 1003
+            Label.Parent = Frame
+            
+            local Bar = Instance.new("Frame")
+            Bar.Size = UDim2.new(1, -20, 0, 8)
+            Bar.Position = UDim2.new(0, 10, 0, 35)
+            Bar.BackgroundColor3 = Color3.fromRGB(60, 60, 70)
+            Bar.ZIndex = 1003
+            Bar.Parent = Frame
+            Instance.new("UICorner", Bar).CornerRadius = UDim.new(0, 4)
+            
+            local Fill = Instance.new("Frame")
+            Fill.Size = UDim2.new((default - min) / (max - min), 0, 1, 0)
+            Fill.BackgroundColor3 = Color3
