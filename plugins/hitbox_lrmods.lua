@@ -1,5 +1,7 @@
--- Hitbox Extender Plugin para LRMODS Combat
--- Versão Final Sem Prints
+-- ============================================
+-- HITBOX EXTENDER PLUGIN - COMPLETO
+-- Todas as funções do FurryHBE original
+-- ============================================
 
 if getgenv().HitboxPluginLoaded ~= nil then
     return
@@ -10,34 +12,52 @@ if not game:IsLoaded() then
     game.Loaded:Wait()
 end
 
+-- Carrega dependência
 if not getgenv().MTAPIMutex then
     pcall(function()
         loadstring(game:HttpGet("https://raw.githubusercontent.com/RectangularObject/MT-Api-v2/main/__source/mt-api%20v2.lua", true))()
     end)
 end
 
+-- ============================================
+-- CONFIGURAÇÕES COMPLETAS
+-- ============================================
 local Settings = {
+    -- Principal
     Enabled = false,
     Size = 10,
     Transparency = 0.5,
+    
+    -- Partes do corpo
     BodyParts = {"HumanoidRootPart"},
     CustomPartName = "HeadHB",
+    
+    -- Verificações
     SitCheck = true,
     FFCheck = true,
+    
+    -- Times e jogadores
     IgnoreOwnTeam = true,
-    IgnorePlayers = {},
-    IgnoreTeams = {},
+    IgnorePlayers = {},      -- Lista de nomes para ignorar
+    IgnoreTeams = {},        -- Lista de times para ignorar
+    
+    -- Colisões
     CollisionsEnabled = false
 }
 
+-- Serviços
 local Teams = game:GetService("Teams")
 local Players = game:GetService("Players")
 local Workspace = game:GetService("Workspace")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
+local RunService = game:GetService("RunService")
 local lPlayer = Players.LocalPlayer
 local players = {}
 local teamModule = nil
 
+-- ============================================
+-- FUNÇÕES PRINCIPAIS
+-- ============================================
 local function updatePlayers()
     if not getgenv().HitboxPluginLoaded then return end
     if not Settings.Enabled then return end
@@ -48,6 +68,7 @@ local function updatePlayers()
     end
 end
 
+-- Inicializa módulos específicos
 pcall(function()
     if game.GameId == 504234221 then
         teamModule = require(ReplicatedStorage.Scripts.Modules.PlayerModule)
@@ -57,12 +78,18 @@ pcall(function()
     end
 end)
 
+-- ============================================
+-- ADICIONAR JOGADOR
+-- ============================================
 local function addPlayer(player)
     players[player] = {}
     local playerIdx = players[player]
     local playerChar = player.Character
     local defaultProperties = {}
 
+    -- ============================================
+    -- DETECÇÃO DE TIME (COMPLETA)
+    -- ============================================
     local function isTeammate()
         if game.GameId == 718936923 then
             if not lPlayer.Character or not playerChar or not playerChar:FindFirstChild("HumanoidRootPart") then return true end
@@ -145,11 +172,17 @@ local function addPlayer(player)
 
     local function isIgnored()
         if not playerChar then return true end
-        return (Settings.IgnoreOwnTeam and isTeammate()) or
-               (Settings.IgnorePlayers[player.Name]) or
-               (player.Team and Settings.IgnoreTeams[player.Team.Name])
+        -- Verifica se o time do jogador está na lista de ignorados
+        local teamIgnored = player.Team and Settings.IgnoreTeams[player.Team.Name]
+        -- Verifica se o nome do jogador está na lista de ignorados
+        local playerIgnored = Settings.IgnorePlayers[player.Name]
+        -- Verifica se é do mesmo time e a opção está ativada
+        local sameTeam = Settings.IgnoreOwnTeam and isTeammate()
+        
+        return teamIgnored or playerIgnored or sameTeam
     end
 
+    -- Sistema de hooks
     local debounce = false
     local function setup(part)
         defaultProperties[part.Name] = {
@@ -286,10 +319,12 @@ local function addPlayer(player)
     end)
 end
 
+-- Remove jogador
 local function removePlayer(player)
     players[player] = nil
 end
 
+-- Inicializa jogadores
 for _, player in pairs(Players:GetPlayers()) do
     if player ~= lPlayer then
         addPlayer(player)
@@ -312,6 +347,7 @@ lPlayer.CharacterAdded:Connect(function()
     updatePlayers()
 end)
 
+-- Loop de atualização
 task.spawn(function()
     while getgenv().HitboxPluginLoaded do
         if Settings.Enabled then
@@ -321,45 +357,146 @@ task.spawn(function()
     end
 end)
 
+-- ============================================
+-- API COMPLETA
+-- ============================================
 local HitboxAPI = {
+    -- Ativar/Desativar
     Toggle = function(state)
         Settings.Enabled = state
         updatePlayers()
     end,
     
+    -- Tamanho
     SetSize = function(size)
         Settings.Size = math.clamp(size, 2, 100)
         updatePlayers()
     end,
     
+    -- Transparência
     SetTransparency = function(transparency)
         Settings.Transparency = math.clamp(transparency, 0, 1)
         updatePlayers()
     end,
     
+    -- Partes do corpo
     SetBodyParts = function(parts)
         Settings.BodyParts = parts
         updatePlayers()
     end,
     
+    -- Nome da parte customizada
+    SetCustomPartName = function(name)
+        Settings.CustomPartName = name
+        updatePlayers()
+    end,
+    
+    -- Ignorar time próprio
     SetIgnoreOwnTeam = function(state)
         Settings.IgnoreOwnTeam = state
         updatePlayers()
     end,
     
+    -- Verificação de sentado
+    SetSitCheck = function(state)
+        Settings.SitCheck = state
+        updatePlayers()
+    end,
+    
+    -- Verificação de ForceField
+    SetFFCheck = function(state)
+        Settings.FFCheck = state
+        updatePlayers()
+    end,
+    
+    -- Colisões
     SetCollisions = function(state)
         Settings.CollisionsEnabled = state
         updatePlayers()
     end,
     
+    -- Ignorar jogador específico
+    IgnorePlayer = function(playerName)
+        Settings.IgnorePlayers[playerName] = true
+        updatePlayers()
+    end,
+    
+    -- Deixar de ignorar jogador
+    UnignorePlayer = function(playerName)
+        Settings.IgnorePlayers[playerName] = nil
+        updatePlayers()
+    end,
+    
+    -- Verificar se jogador está ignorado
+    IsPlayerIgnored = function(playerName)
+        return Settings.IgnorePlayers[playerName] == true
+    end,
+    
+    -- Limpar lista de jogadores ignorados
+    ClearIgnoredPlayers = function()
+        Settings.IgnorePlayers = {}
+        updatePlayers()
+    end,
+    
+    -- Ignorar time específico
+    IgnoreTeam = function(teamName)
+        Settings.IgnoreTeams[teamName] = true
+        updatePlayers()
+    end,
+    
+    -- Deixar de ignorar time
+    UnignoreTeam = function(teamName)
+        Settings.IgnoreTeams[teamName] = nil
+        updatePlayers()
+    end,
+    
+    -- Limpar times ignorados
+    ClearIgnoredTeams = function()
+        Settings.IgnoreTeams = {}
+        updatePlayers()
+    end,
+    
+    -- Obter todas as configurações
     GetSettings = function()
         return Settings
     end,
     
+    -- Forçar atualização
+    ForceUpdate = function()
+        updatePlayers()
+    end,
+    
+    -- Obter lista de jogadores disponíveis
+    GetPlayers = function()
+        local list = {}
+        for _, p in pairs(Players:GetPlayers()) do
+            if p ~= lPlayer then
+                table.insert(list, p.Name)
+            end
+        end
+        return list
+    end,
+    
+    -- Obter lista de times disponíveis
+    GetTeams = function()
+        local list = {}
+        for _, p in pairs(Players:GetPlayers()) do
+            if p ~= lPlayer and p.Team then
+                list[p.Team.Name] = true
+            end
+        end
+        local teams = {}
+        for name, _ in pairs(list) do
+            table.insert(teams, name)
+        end
+        return teams
+    end,
+    
+    -- Painel de configuração
     CreateConfigPanel = function(parent)
         local Panel = Instance.new("Frame")
-        Panel.Size = UDim2.new(0, 250, 0, 320)
-        Panel.Position = UDim2.new(0.5, -125, 0.5, -160)
+        Panel.Size = UDim2.new(0, 280, 0, 400)
+        Panel.Position = UDim2.new(0.5, -140, 0.5, -200)
         Panel.BackgroundColor3 = Color3.fromRGB(25, 25, 35)
         Panel.BorderSizePixel = 0
         Panel.Visible = false
@@ -370,12 +507,12 @@ local HitboxAPI = {
         
         Instance.new("UICorner", Panel).CornerRadius = UDim.new(0, 10)
         
+        -- Barra de título
         local TitleBar = Instance.new("Frame")
         TitleBar.Size = UDim2.new(1, 0, 0, 30)
         TitleBar.BackgroundColor3 = Color3.fromRGB(35, 35, 45)
         TitleBar.ZIndex = 1001
         TitleBar.Parent = Panel
-        Instance.new("UICorner", TitleBar).CornerRadius = UDim.new(0, 10)
         
         local Title = Instance.new("TextLabel")
         Title.Size = UDim2.new(1, -30, 1, 0)
@@ -399,11 +536,11 @@ local HitboxAPI = {
         Close.TextSize = 11
         Close.ZIndex = 1002
         Close.Parent = TitleBar
-        Instance.new("UICorner", Close).CornerRadius = UDim.new(0, 11)
         Close.MouseButton1Click:Connect(function()
             Panel.Visible = false
         end)
         
+        -- Scroll
         local Scroll = Instance.new("ScrollingFrame")
         Scroll.Size = UDim2.new(1, -16, 1, -40)
         Scroll.Position = UDim2.new(0, 8, 0, 35)
@@ -420,6 +557,7 @@ local HitboxAPI = {
             Scroll.CanvasSize = UDim2.new(0, 0, 0, List.AbsoluteContentSize.Y + 10)
         end)
         
+        -- Helper: Toggle
         local function AddToggle(name, default, callback)
             local Frame = Instance.new("Frame")
             Frame.Size = UDim2.new(1, 0, 0, 35)
@@ -461,6 +599,7 @@ local HitboxAPI = {
             end)
         end
         
+        -- Helper: Slider
         local function AddSlider(name, min, max, default, callback)
             local Frame = Instance.new("Frame")
             Frame.Size = UDim2.new(1, 0, 0, 50)
@@ -527,26 +666,40 @@ local HitboxAPI = {
             end)
         end
         
+        -- ============================================
+        -- TÍTULO DA SEÇÃO
+        -- ============================================
+        local function AddSection(text)
+            local Section = Instance.new("TextLabel")
+            Section.Size = UDim2.new(1, 0, 0, 22)
+            Section.BackgroundTransparency = 1
+            Section.Text = "  " .. text
+            Section.TextColor3 = Color3.fromRGB(100, 200, 255)
+            Section.Font = Enum.Font.GothamBold
+            Section.TextSize = 10
+            Section.TextXAlignment = Enum.TextXAlignment.Left
+            Section.ZIndex = 1002
+            Section.Parent = Scroll
+        end
+        
+        -- ============================================
+        -- CONTEÚDO DO PAINEL
+        -- ============================================
+        
+        -- PRINCIPAL
+        AddSection("🎯 PRINCIPAL")
         AddToggle("Ativar Hitbox", Settings.Enabled, function(state)
             HitboxAPI.Toggle(state)
         end)
-        
         AddSlider("Tamanho", 2, 100, Settings.Size, function(value)
             HitboxAPI.SetSize(value)
         end)
-        
         AddSlider("Transparência", 0, 1, Settings.Transparency, function(value)
             HitboxAPI.SetTransparency(value)
         end)
         
-        AddToggle("Ignorar Aliados", Settings.IgnoreOwnTeam, function(state)
-            HitboxAPI.SetIgnoreOwnTeam(state)
-        end)
-        
-        AddToggle("Colisões", Settings.CollisionsEnabled, function(state)
-            HitboxAPI.SetCollisions(state)
-        end)
-        
+        -- PARTES DO CORPO
+        AddSection("🦴 PARTES DO CORPO")
         local PartsFrame = Instance.new("Frame")
         PartsFrame.Size = UDim2.new(1, 0, 0, 125)
         PartsFrame.BackgroundColor3 = Color3.fromRGB(40, 40, 50)
@@ -554,20 +707,11 @@ local HitboxAPI = {
         PartsFrame.Parent = Scroll
         Instance.new("UICorner", PartsFrame).CornerRadius = UDim.new(0, 6)
         
-        local PartsLabel = Instance.new("TextLabel")
-        PartsLabel.Size = UDim2.new(1, -10, 0, 20)
-        PartsLabel.Position = UDim2.new(0, 8, 0, 3)
-        PartsLabel.BackgroundTransparency = 1
-        PartsLabel.Text = "Partes do Corpo:"
-        PartsLabel.TextColor3 = Color3.fromRGB(200, 200, 200)
-        PartsLabel.Font = Enum.Font.GothamBold
-        PartsLabel.TextSize = 10
-        PartsLabel.TextXAlignment = Enum.TextXAlignment.Left
-        PartsLabel.ZIndex = 1003
-        PartsLabel.Parent = PartsFrame
-        
         local bodyParts = {"Head", "HumanoidRootPart", "Torso", "Left Arm", "Right Arm", "Left Leg", "Right Leg"}
-        local selectedParts = {["HumanoidRootPart"] = true}
+        local selectedParts = {}
+        for _, v in pairs(Settings.BodyParts) do
+            selectedParts[v] = true
+        end
         
         for i, partName in pairs(bodyParts) do
             local col = (i - 1) % 2
@@ -575,7 +719,7 @@ local HitboxAPI = {
             
             local PartToggle = Instance.new("Frame")
             PartToggle.Size = UDim2.new(0.45, -8, 0, 22)
-            PartToggle.Position = UDim2.new(col == 0 and 0 or 0.5, col == 0 and 8 or 4, 0, 25 + row * 26)
+            PartToggle.Position = UDim2.new(col == 0 and 0 or 0.5, col == 0 and 8 or 4, 0, 5 + row * 28)
             PartToggle.BackgroundColor3 = selectedParts[partName] and Color3.fromRGB(0, 180, 100) or Color3.fromRGB(50, 50, 60)
             PartToggle.ZIndex = 1003
             PartToggle.Parent = PartsFrame
@@ -612,9 +756,28 @@ local HitboxAPI = {
             end)
         end
         
+        -- IGNORAR
+        AddSection("🚫 IGNORAR")
+        AddToggle("Ignorar Aliados", Settings.IgnoreOwnTeam, function(state)
+            HitboxAPI.SetIgnoreOwnTeam(state)
+        end)
+        AddToggle("Ignorar Sentados", Settings.SitCheck, function(state)
+            HitboxAPI.SetSitCheck(state)
+        end)
+        AddToggle("Ignorar ForceField", Settings.FFCheck, function(state)
+            HitboxAPI.SetFFCheck(state)
+        end)
+        
+        -- COLISÕES
+        AddSection("💥 COLISÕES")
+        AddToggle("Ativar Colisões", Settings.CollisionsEnabled, function(state)
+            HitboxAPI.SetCollisions(state)
+        end)
+        
         return Panel
     end
 }
 
+-- Finaliza
 getgenv().HitboxPluginLoaded = true
 return HitboxAPI
