@@ -1,25 +1,21 @@
 -- Hitbox Extender Plugin para LRMODS Combat
--- Versão: 1.0 Completa
--- Chamado via: loadstring(game:HttpGet("URL_DO_GITHUB"))()
+-- Versão Final Sem Prints
 
 if getgenv().HitboxPluginLoaded ~= nil then
-    return {error = "Hitbox já está carregado!"}
+    return
 end
 getgenv().HitboxPluginLoaded = false
 
--- Aguarda o jogo carregar
 if not game:IsLoaded() then
     game.Loaded:Wait()
 end
 
--- Carrega dependência MT-Api
 if not getgenv().MTAPIMutex then
     pcall(function()
         loadstring(game:HttpGet("https://raw.githubusercontent.com/RectangularObject/MT-Api-v2/main/__source/mt-api%20v2.lua", true))()
     end)
 end
 
--- Configurações padrão
 local Settings = {
     Enabled = false,
     Size = 10,
@@ -34,17 +30,14 @@ local Settings = {
     CollisionsEnabled = false
 }
 
--- Serviços
 local Teams = game:GetService("Teams")
 local Players = game:GetService("Players")
 local Workspace = game:GetService("Workspace")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
-local RunService = game:GetService("RunService")
 local lPlayer = Players.LocalPlayer
 local players = {}
 local teamModule = nil
 
--- Função de atualização
 local function updatePlayers()
     if not getgenv().HitboxPluginLoaded then return end
     if not Settings.Enabled then return end
@@ -55,61 +48,41 @@ local function updatePlayers()
     end
 end
 
--- Inicializa módulos específicos de jogos
 pcall(function()
-    if game.GameId == 504234221 then -- Vampire Hunters 3
+    if game.GameId == 504234221 then
         teamModule = require(ReplicatedStorage.Scripts.Modules.PlayerModule)
     end
-    if game.GameId == 1934496708 then -- Project: SCP
+    if game.GameId == 1934496708 then
         teamModule = require(Workspace:WaitForChild("Teams"))
     end
 end)
 
--- Função para adicionar jogador
 local function addPlayer(player)
     players[player] = {}
     local playerIdx = players[player]
     local playerChar = player.Character
     local defaultProperties = {}
 
-    -- ============================================
-    -- LÓGICA COMPLETA DE DETECÇÃO DE TIMES
-    -- ============================================
     local function isTeammate()
-        -- Neighborhood War
         if game.GameId == 718936923 then
             if not lPlayer.Character or not playerChar or not playerChar:FindFirstChild("HumanoidRootPart") then return true end
             return lPlayer.Character.HumanoidRootPart.Color == playerChar.HumanoidRootPart.Color
-        
-        -- Fireteam
         elseif game.PlaceId == 633284182 then
             if not player:FindFirstChild("PlayerData") or not player.PlayerData:FindFirstChild("TeamValue") then return true end
             return lPlayer.PlayerData.TeamValue.Value == player.PlayerData.TeamValue.Value
-        
-        -- Q-Clash
         elseif game.PlaceId == 2029250188 then
             if not lPlayer.Character or not playerChar then return true end
             return lPlayer.Character.Parent == playerChar.Parent
-        
-        -- Paintball Reloaded
         elseif game.PlaceId == 2978450615 then
             return getrenv()._G.PlayerProfiles.Data[lPlayer.Name].Team == getrenv()._G.PlayerProfiles.Data[player.Name].Team
-        
-        -- Project: SCP
         elseif game.GameId == 1934496708 then
             if Workspace.FriendlyFire.Value then return false end
             return (not player.Team or player.Team.Name == "LOBBY" or lPlayer.Team.Name == "LOBBY" or player.Team.Name == "Admin" or lPlayer.Team == player.Team) or
             teamModule[lPlayer.Team.Name] == teamModule[player.Team.Name] or
             ((teamModule[lPlayer.Team.Name] == "CI" and teamModule[player.Team.Name] == "CD") or
             (teamModule[player.Team.Name] == "CI" and teamModule[lPlayer.Team.Name] == "CD"))
-        
-        -- SCP rBreach
         elseif game.PlaceId == 2622527242 then
             if not player.Team or player.Team.Name == "Intro" or player.Team.Name == "Spectator" or player.Team.Name == "Not Playing" or lPlayer.Team == player.Team then return true end
-            local lPlayerTeamName = lPlayer.Team.Name
-            local playerTeamName = player.Team.Name
-            local selfTeam, playerTeam
-            
             local function classifyTeam(teamName)
                 if teamName == "Class-D Personnel" or teamName == "Chaos Insurgency" then return "Chads" end
                 if teamName == "Facility Personnel" or teamName == "Security Department" or teamName == "Mobile Task Force" then return "Crayon Eaters" end
@@ -118,69 +91,39 @@ local function addPlayer(player)
                 if teamName == "Unusual Incidents Unit" then return "Who2?" end
                 return nil
             end
-            
-            selfTeam = classifyTeam(lPlayerTeamName)
-            playerTeam = classifyTeam(playerTeamName)
-            
+            local selfTeam = classifyTeam(lPlayer.Team.Name)
+            local playerTeam = classifyTeam(player.Team.Name)
             if selfTeam == "Who2?" or playerTeam == "Who2?" then
                 if selfTeam == "Crayon Eaters" or playerTeam == "Crayon Eaters" or selfTeam == "Who?" or playerTeam == "Who?" then
                     return true
                 end
             end
             return selfTeam == playerTeam
-        
-        -- Anomalous Activities: First Contact
         elseif game.PlaceId == 8770868695 then
             if not lPlayer.Character or not playerChar or not player.Team or player.Team.Name == "Dead" or player.Team.Name == "Inactive" then return true end
             return lPlayer.Character.Parent == playerChar.Parent
-        
-        -- Escape The Darkness
         elseif game.PlaceId == 5884786982 then
             if not lPlayer.Character or not playerChar then return true end
             return lPlayer.Character.name ~= "Killer" and playerChar.Name ~= "Killer"
-        
-        -- Rush Point
         elseif game.GameId == 2162282815 then
             if not player:FindFirstChild("SelectedTeam") then return true end
             return player.SelectedTeam.Value == lPlayer.SelectedTeam.Value
-        
-        -- Vampire Hunters 3
         elseif game.PlaceId == 1240644540 then
             if not teamModule or not teamModule.IsPlayerSurvivor then return true end
             return teamModule.IsPlayerSurvivor(nil, player) == true and teamModule.IsPlayerSurvivor(nil, lPlayer) == true
-        
-        -- Return of Humans vs Zombies
         elseif game.PlaceId == 10236714118 then
             if not player:FindFirstChild("PlayerData") or not player.PlayerData:FindFirstChild("Team") then return true end
             return lPlayer.PlayerData.Team.Value == player.PlayerData.Team.Value
-        
-        -- Energy Assault
-        elseif game.PlaceId == 6172932937 then
-            if not player.Team or not lPlayer.Team then return true end
-            return player.Team == lPlayer.Team
-        
-        -- Town
-        elseif game.PlaceId == 4991214437 or game.PlaceId == 6652350934 then
-            if not player.Team or not lPlayer.Team then return true end
-            return player.Team == lPlayer.Team
-        
-        -- Critical Strike
-        elseif game.PlaceId == 111311599 then
-            if not player.Team or not lPlayer.Team then return true end
-            return player.Team == lPlayer.Team
         end
-        
-        -- Padrão: compara times
         return lPlayer.Team == player.Team
     end
 
-    -- Verificações de estado
     local function isDead()
         if not playerChar then return true end
         local humanoid = playerChar:FindFirstChildWhichIsA("Humanoid")
-        if game.PlaceId == 6172932937 then -- Energy Assault
+        if game.PlaceId == 6172932937 then
             return player.ragdolled.Value
-        elseif game.GameId == 718936923 then -- Neighborhood War
+        elseif game.GameId == 718936923 then
             return playerChar:FindFirstChild("Dead") ~= nil
         end
         return humanoid and humanoid:GetState() == Enum.HumanoidStateType.Dead
@@ -193,7 +136,7 @@ local function addPlayer(player)
 
     local function isFFed()
         if not playerChar then return false end
-        if game.PlaceId == 4991214437 or game.PlaceId == 6652350934 then -- town
+        if game.PlaceId == 4991214437 or game.PlaceId == 6652350934 then
             return playerChar.Head.Material == Enum.Material.ForceField
         end
         local ff = playerChar:FindFirstChildWhichIsA("ForceField")
@@ -207,7 +150,6 @@ local function addPlayer(player)
                (player.Team and Settings.IgnoreTeams[player.Team.Name])
     end
 
-    -- Sistema de hooks
     local debounce = false
     local function setup(part)
         defaultProperties[part.Name] = {
@@ -299,10 +241,12 @@ local function addPlayer(player)
             part.Size = Vector3.new(Settings.Size, Settings.Size, Settings.Size)
             part.Transparency = Settings.Transparency
         else
-            part.Massless = defaultProperties[part.Name].Massless
-            part.CanCollide = defaultProperties[part.Name].CanCollide
-            part.Size = defaultProperties[part.Name].Size
-            part.Transparency = defaultProperties[part.Name].Transparency
+            if defaultProperties[part.Name] then
+                part.Massless = defaultProperties[part.Name].Massless
+                part.CanCollide = defaultProperties[part.Name].CanCollide
+                part.Size = defaultProperties[part.Name].Size
+                part.Transparency = defaultProperties[part.Name].Transparency
+            end
         end
     end
 
@@ -317,7 +261,6 @@ local function addPlayer(player)
         debounce = false
     end
 
-    -- Conexões de eventos do jogador
     player.CharacterAdded:Connect(function(character)
         playerChar = character
         defaultProperties = {}
@@ -343,19 +286,16 @@ local function addPlayer(player)
     end)
 end
 
--- Remove jogador
 local function removePlayer(player)
     players[player] = nil
 end
 
--- Inicializa jogadores existentes
 for _, player in pairs(Players:GetPlayers()) do
     if player ~= lPlayer then
         addPlayer(player)
     end
 end
 
--- Conexões globais
 Players.PlayerAdded:Connect(function(player)
     if player ~= lPlayer then
         addPlayer(player)
@@ -372,7 +312,6 @@ lPlayer.CharacterAdded:Connect(function()
     updatePlayers()
 end)
 
--- Atualização periódica (a cada 2 segundos) para garantir sincronia
 task.spawn(function()
     while getgenv().HitboxPluginLoaded do
         if Settings.Enabled then
@@ -382,24 +321,20 @@ task.spawn(function()
     end
 end)
 
--- API de controle
 local HitboxAPI = {
     Toggle = function(state)
         Settings.Enabled = state
         updatePlayers()
-        return Settings.Enabled
     end,
     
     SetSize = function(size)
         Settings.Size = math.clamp(size, 2, 100)
         updatePlayers()
-        return Settings.Size
     end,
     
     SetTransparency = function(transparency)
         Settings.Transparency = math.clamp(transparency, 0, 1)
         updatePlayers()
-        return Settings.Transparency
     end,
     
     SetBodyParts = function(parts)
@@ -421,11 +356,6 @@ local HitboxAPI = {
         return Settings
     end,
     
-    ForceUpdate = function()
-        updatePlayers()
-    end,
-    
-    -- Retorna o painel de configuração
     CreateConfigPanel = function(parent)
         local Panel = Instance.new("Frame")
         Panel.Size = UDim2.new(0, 250, 0, 320)
@@ -438,20 +368,14 @@ local HitboxAPI = {
         Panel.Draggable = true
         Panel.Parent = parent
         
-        local Corner = Instance.new("UICorner")
-        Corner.CornerRadius = UDim.new(0, 10)
-        Corner.Parent = Panel
+        Instance.new("UICorner", Panel).CornerRadius = UDim.new(0, 10)
         
-        -- Título
         local TitleBar = Instance.new("Frame")
         TitleBar.Size = UDim2.new(1, 0, 0, 30)
         TitleBar.BackgroundColor3 = Color3.fromRGB(35, 35, 45)
         TitleBar.ZIndex = 1001
         TitleBar.Parent = Panel
-        
-        local TitleCorner = Instance.new("UICorner")
-        TitleCorner.CornerRadius = UDim.new(0, 10)
-        TitleCorner.Parent = TitleBar
+        Instance.new("UICorner", TitleBar).CornerRadius = UDim.new(0, 10)
         
         local Title = Instance.new("TextLabel")
         Title.Size = UDim2.new(1, -30, 1, 0)
@@ -465,7 +389,6 @@ local HitboxAPI = {
         Title.ZIndex = 1002
         Title.Parent = TitleBar
         
-        -- Botão Fechar
         local Close = Instance.new("TextButton")
         Close.Size = UDim2.new(0, 22, 0, 22)
         Close.Position = UDim2.new(1, -26, 0, 4)
@@ -476,16 +399,11 @@ local HitboxAPI = {
         Close.TextSize = 11
         Close.ZIndex = 1002
         Close.Parent = TitleBar
-        
-        local closeCorner = Instance.new("UICorner")
-        closeCorner.CornerRadius = UDim.new(0, 11)
-        closeCorner.Parent = Close
-        
+        Instance.new("UICorner", Close).CornerRadius = UDim.new(0, 11)
         Close.MouseButton1Click:Connect(function()
             Panel.Visible = false
         end)
         
-        -- Conteúdo scrollável
         local Scroll = Instance.new("ScrollingFrame")
         Scroll.Size = UDim2.new(1, -16, 1, -40)
         Scroll.Position = UDim2.new(0, 8, 0, 35)
@@ -502,17 +420,13 @@ local HitboxAPI = {
             Scroll.CanvasSize = UDim2.new(0, 0, 0, List.AbsoluteContentSize.Y + 10)
         end)
         
-        -- Helper: Toggle
         local function AddToggle(name, default, callback)
             local Frame = Instance.new("Frame")
             Frame.Size = UDim2.new(1, 0, 0, 35)
             Frame.BackgroundColor3 = Color3.fromRGB(40, 40, 50)
             Frame.ZIndex = 1002
             Frame.Parent = Scroll
-            
-            local frameCorner = Instance.new("UICorner")
-            frameCorner.CornerRadius = UDim.new(0, 6)
-            frameCorner.Parent = Frame
+            Instance.new("UICorner", Frame).CornerRadius = UDim.new(0, 6)
             
             local Label = Instance.new("TextLabel")
             Label.Size = UDim2.new(1, -50, 1, 0)
@@ -536,10 +450,7 @@ local HitboxAPI = {
             Btn.TextSize = 10
             Btn.ZIndex = 1003
             Btn.Parent = Frame
-            
-            local btnCorner = Instance.new("UICorner")
-            btnCorner.CornerRadius = UDim.new(0, 4)
-            btnCorner.Parent = Btn
+            Instance.new("UICorner", Btn).CornerRadius = UDim.new(0, 4)
             
             local active = default
             Btn.MouseButton1Click:Connect(function()
@@ -550,17 +461,13 @@ local HitboxAPI = {
             end)
         end
         
-        -- Helper: Slider
         local function AddSlider(name, min, max, default, callback)
             local Frame = Instance.new("Frame")
             Frame.Size = UDim2.new(1, 0, 0, 50)
             Frame.BackgroundColor3 = Color3.fromRGB(40, 40, 50)
             Frame.ZIndex = 1002
             Frame.Parent = Scroll
-            
-            local frameCorner = Instance.new("UICorner")
-            frameCorner.CornerRadius = UDim.new(0, 6)
-            frameCorner.Parent = Frame
+            Instance.new("UICorner", Frame).CornerRadius = UDim.new(0, 6)
             
             local Label = Instance.new("TextLabel")
             Label.Size = UDim2.new(1, -10, 0, 20)
@@ -580,20 +487,14 @@ local HitboxAPI = {
             Bar.BackgroundColor3 = Color3.fromRGB(60, 60, 70)
             Bar.ZIndex = 1003
             Bar.Parent = Frame
-            
-            local barCorner = Instance.new("UICorner")
-            barCorner.CornerRadius = UDim.new(0, 4)
-            barCorner.Parent = Bar
+            Instance.new("UICorner", Bar).CornerRadius = UDim.new(0, 4)
             
             local Fill = Instance.new("Frame")
             Fill.Size = UDim2.new((default - min) / (max - min), 0, 1, 0)
             Fill.BackgroundColor3 = Color3.fromRGB(0, 200, 100)
             Fill.ZIndex = 1004
             Fill.Parent = Bar
-            
-            local fillCorner = Instance.new("UICorner")
-            fillCorner.CornerRadius = UDim.new(0, 4)
-            fillCorner.Parent = Fill
+            Instance.new("UICorner", Fill).CornerRadius = UDim.new(0, 4)
             
             local Drag = Instance.new("TextButton")
             Drag.Size = UDim2.new(1, 0, 2, 0)
@@ -626,7 +527,6 @@ local HitboxAPI = {
             end)
         end
         
-        -- Toggles e Sliders
         AddToggle("Ativar Hitbox", Settings.Enabled, function(state)
             HitboxAPI.Toggle(state)
         end)
@@ -647,16 +547,12 @@ local HitboxAPI = {
             HitboxAPI.SetCollisions(state)
         end)
         
-        -- Seção de partes do corpo
         local PartsFrame = Instance.new("Frame")
         PartsFrame.Size = UDim2.new(1, 0, 0, 125)
         PartsFrame.BackgroundColor3 = Color3.fromRGB(40, 40, 50)
         PartsFrame.ZIndex = 1002
         PartsFrame.Parent = Scroll
-        
-        local partsCorner = Instance.new("UICorner")
-        partsCorner.CornerRadius = UDim.new(0, 6)
-        partsCorner.Parent = PartsFrame
+        Instance.new("UICorner", PartsFrame).CornerRadius = UDim.new(0, 6)
         
         local PartsLabel = Instance.new("TextLabel")
         PartsLabel.Size = UDim2.new(1, -10, 0, 20)
@@ -673,11 +569,9 @@ local HitboxAPI = {
         local bodyParts = {"Head", "HumanoidRootPart", "Torso", "Left Arm", "Right Arm", "Left Leg", "Right Leg"}
         local selectedParts = {["HumanoidRootPart"] = true}
         
-        local col = 0
-        local row = 0
         for i, partName in pairs(bodyParts) do
-            col = (i - 1) % 2
-            row = math.floor((i - 1) / 2)
+            local col = (i - 1) % 2
+            local row = math.floor((i - 1) / 2)
             
             local PartToggle = Instance.new("Frame")
             PartToggle.Size = UDim2.new(0.45, -8, 0, 22)
@@ -685,10 +579,7 @@ local HitboxAPI = {
             PartToggle.BackgroundColor3 = selectedParts[partName] and Color3.fromRGB(0, 180, 100) or Color3.fromRGB(50, 50, 60)
             PartToggle.ZIndex = 1003
             PartToggle.Parent = PartsFrame
-            
-            local partCorner = Instance.new("UICorner")
-            partCorner.CornerRadius = UDim.new(0, 4)
-            partCorner.Parent = PartToggle
+            Instance.new("UICorner", PartToggle).CornerRadius = UDim.new(0, 4)
             
             local PartBtn = Instance.new("TextButton")
             PartBtn.Size = UDim2.new(1, 0, 1, 0)
@@ -716,34 +607,14 @@ local HitboxAPI = {
                 if #partsList == 0 then
                     partsList = {"HumanoidRootPart"}
                     selectedParts["HumanoidRootPart"] = true
-                    -- Atualiza visual
-                    for _, child in pairs(PartsFrame:GetChildren()) do
-                        if child:IsA("Frame") and child:FindFirstChildOfClass("TextButton") then
-                            local btn = child:FindFirstChildOfClass("TextButton")
-                            if btn and btn.Text == "HumanoidRootPart" then
-                                child.BackgroundColor3 = Color3.fromRGB(0, 180, 100)
-                            end
-                        end
-                    end
                 end
                 HitboxAPI.SetBodyParts(partsList)
             end)
         end
         
         return Panel
-    end,
-    
-    -- Destruir plugin
-    Destroy = function()
-        getgenv().HitboxPluginLoaded = false
-        Settings.Enabled = false
-        updatePlayers()
-        players = {}
-        Settings = {}
     end
 }
 
--- Finaliza
 getgenv().HitboxPluginLoaded = true
-
 return HitboxAPI
