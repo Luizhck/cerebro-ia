@@ -1,0 +1,56 @@
+-- Módulo ESP BillboardGui (3D)
+local ESP_Billboard = {}
+
+ESP_Billboard.Config = {
+    MaxDistance = 500,
+    TextSize = 20,
+    ShowHealth = true,
+    ShowDistance = true
+}
+
+local billboards = {}
+
+function ESP_Billboard.AddPlayer(player)
+    local bill = Instance.new("BillboardGui")
+    bill.Size = UDim2.new(0, 200, 0, 100)
+    bill.AlwaysOnTop = true
+    bill.MaxDistance = ESP_Billboard.Config.MaxDistance
+    bill.Parent = player.Character:WaitForChild("Head")
+    bill.Adornee = player.Character.Head
+    
+    local nameLabel = Instance.new("TextLabel")
+    nameLabel.Size = UDim2.new(1, 0, 0, ESP_Billboard.Config.TextSize)
+    nameLabel.BackgroundTransparency = 1
+    nameLabel.Text = player.Name
+    nameLabel.TextColor3 = Color3.fromRGB(255, 0, 0)
+    nameLabel.TextStrokeTransparency = 0
+    nameLabel.Parent = bill
+    
+    billboards[player] = bill
+end
+
+function ESP_Billboard.RemovePlayer(player)
+    if billboards[player] then
+        billboards[player]:Destroy()
+        billboards[player] = nil
+    end
+end
+
+function ESP_Billboard.Render(Players, LocalPlayer, Camera)
+    -- BillboardGui é automático, só precisa manter limpo
+end
+
+function ESP_Billboard.Start()
+    Players.PlayerAdded:Connect(function(player)
+        player.CharacterAdded:Connect(function()
+            task.wait(0.5)
+            ESP_Billboard.AddPlayer(player)
+        end)
+    end)
+    
+    Players.PlayerRemoving:Connect(function(player)
+        ESP_Billboard.RemovePlayer(player)
+    end)
+end
+
+return ESP_Billboard
