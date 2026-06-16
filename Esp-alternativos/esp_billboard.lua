@@ -1,4 +1,4 @@
--- Módulo ESP BillboardGui (3D) - Completo
+-- Módulo ESP BillboardGui (3D) - Simplificado
 local ESP_Billboard = {}
 
 ESP_Billboard.Config = {
@@ -7,7 +7,7 @@ ESP_Billboard.Config = {
     ShowHealth = true,
     ShowDistance = true,
     ShowWeapon = true,
-    TeamCheck = true
+    TeamCheck = true  -- ✅ Apenas TeamCheck, sem ShowEnemy/ShowAlly
 }
 
 local billboards = {}
@@ -15,16 +15,13 @@ local Players = game:GetService("Players")
 local LocalPlayer = Players.LocalPlayer
 
 local function GetTeamColor(player)
-    if player.Team then
-        return player.TeamColor.Color
-    end
+    if player.Team then return player.TeamColor.Color end
     return Color3.fromRGB(255, 255, 255)
 end
 
 function ESP_Billboard.AddPlayer(player)
     local char = player.Character
     if not char then return end
-    
     local head = char:FindFirstChild("Head")
     if not head then return end
     
@@ -37,7 +34,6 @@ function ESP_Billboard.AddPlayer(player)
     
     local nameLabel = Instance.new("TextLabel")
     nameLabel.Size = UDim2.new(1, 0, 0, ESP_Billboard.Config.TextSize)
-    nameLabel.Position = UDim2.new(0, 0, 0, 0)
     nameLabel.BackgroundTransparency = 1
     nameLabel.Text = player.Name
     nameLabel.TextColor3 = GetTeamColor(player)
@@ -67,43 +63,34 @@ function ESP_Billboard.AddPlayer(player)
     distLabel.TextSize = 10
     distLabel.Parent = bill
     
-    billboards[player] = {
-        Bill = bill,
-        Name = nameLabel,
-        Health = healthFill,
-        Dist = distLabel
-    }
+    billboards[player] = {Bill = bill, Name = nameLabel, Health = healthFill, Dist = distLabel}
 end
 
-function ESP_Billboard.RemovePlayer(player)
-    if billboards[player] then
+function ESP_Billboard.Remove(player, stopAll)
+    if stopAll then
+        for p, data in pairs(billboards) do
+            pcall(function() data.Bill:Destroy() end)
+        end
+        billboards = {}
+    elseif player and billboards[player] then
         billboards[player].Bill:Destroy()
         billboards[player] = nil
     end
 end
 
-function ESP_Billboard.RemoveAll()
-    for player, data in pairs(billboards) do
-        pcall(function() data.Bill:Destroy() end)
-    end
-    billboards = {}
-end
-
-function ESP_Billboard.Stop()
-    ESP_Billboard.RemoveAll()
-end
+ESP_Billboard.Stop = function() ESP_Billboard.Remove(nil, true) end
+ESP_Billboard.RemoveAll = function() ESP_Billboard.Remove(nil, true) end
 
 function ESP_Billboard.UpdatePlayer(player)
     local data = billboards[player]
     if not data then return end
     
     local char = player.Character
-    if not char then ESP_Billboard.RemovePlayer(player); return end
+    if not char then ESP_Billboard.Remove(player); return end
     
     local hum = char:FindFirstChildOfClass("Humanoid")
     local hrp = char:FindFirstChild("HumanoidRootPart")
-    
-    if not hum or not hrp then ESP_Billboard.RemovePlayer(player); return end
+    if not hum or not hrp then ESP_Billboard.Remove(player); return end
     
     data.Name.TextColor3 = GetTeamColor(player)
     
@@ -111,26 +98,21 @@ function ESP_Billboard.UpdatePlayer(player)
     data.Health.Size = UDim2.new(healthPercent, 0, 1, 0)
     data.Health.BackgroundColor3 = Color3.fromRGB(
         math.floor(255 * (1 - healthPercent)),
-        math.floor(255 * healthPercent),
-        0
+        math.floor(255 * healthPercent), 0
     )
     
     local myChar = LocalPlayer.Character
     if myChar then
         local myHRP = myChar:FindFirstChild("HumanoidRootPart")
         if myHRP then
-            local dist = (myHRP.Position - hrp.Position).Magnitude
-            data.Dist.Text = math.floor(dist) .. "m"
+            data.Dist.Text = math.floor((myHRP.Position - hrp.Position).Magnitude) .. "m"
         end
     end
     
     local tool = char:FindFirstChildOfClass("Tool")
-    if tool and ESP_Billboard.Config.ShowWeapon then
-        data.Name.Text = player.Name .. " [" .. tool.Name .. "]"
-    else
-        data.Name.Text = player.Name
-    end
+    data.Name.Text = (tool and ESP_Billboard.Config.ShowWeapon) and (player.Name .. " [" .. tool.Name .. "]") or player.Name
     
+    -- ✅ TeamCheck: esconde aliados
     if ESP_Billboard.Config.TeamCheck and player.Team == LocalPlayer.Team then
         data.Bill.Enabled = false
     else
@@ -138,11 +120,8 @@ function ESP_Billboard.UpdatePlayer(player)
     end
     
     local cameraDist = (workspace.CurrentCamera.CFrame.Position - hrp.Position).Magnitude
-    if cameraDist > ESP_Billboard.Config.MaxDistance then
-        data.Bill.Enabled = false
-    end
-    
-    if hum.Health <= 0 then ESP_Billboard.RemovePlayer(player) end
+    if cameraDist > ESP_Billboard.Config.MaxDistance then data.Bill.Enabled = false end
+    if hum.Health <= 0 then ESP_Billboard.Remove(player) end
 end
 
 function ESP_Billboard.Render(Players, LocalPlayer, Camera)
@@ -152,7 +131,7 @@ function ESP_Billboard.Render(Players, LocalPlayer, Camera)
                 if not billboards[player] then ESP_Billboard.AddPlayer(player) end
                 ESP_Billboard.UpdatePlayer(player)
             else
-                ESP_Billboard.RemovePlayer(player)
+                ESP_Billboard.Remove(player)
             end
         end
     end
@@ -165,7 +144,7 @@ function ESP_Billboard.Start()
             ESP_Billboard.AddPlayer(player)
         end)
     end)
-    Players.PlayerRemoving:Connect(function(player) ESP_Billboard.RemovePlayer(player) end)
+    Players.PlayerRemoving:Connect(function(player) ESP_Billboard.Remove(player) end)
 end
 
 return ESP_Billboard
