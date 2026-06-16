@@ -1387,7 +1387,7 @@ TagScanner = function()
     end)
     
     return blocked
-end
+end,
 -- 27. HCI Analysis (Interação Humano-Computador)
 HCIAnalysis = function()
     local blocked = {}
