@@ -536,42 +536,273 @@ AntiTeleport = function()
     return blocked
 end,
     
-    -- 9. Anti-Speed Hack
-    AntiSpeed = function()
-        local blocked = {}
+    -- 9. Anti-Speed Hack (REFORÇADO)
+AntiSpeed = function()
+    local blocked = {}
+    
+    if LocalPlayer.Character then
+        local humanoid = LocalPlayer.Character:FindFirstChildOfClass("Humanoid")
+        local rootPart = LocalPlayer.Character:FindFirstChild("HumanoidRootPart")
         
-        if LocalPlayer.Character then
-            local humanoid = LocalPlayer.Character:FindFirstChildOfClass("Humanoid")
-            if humanoid then
-                local success = pcall(function()
-                    local ws = humanoid.WalkSpeed
-                end)
-                
-                if not success then
-                    table.insert(blocked, {
-                        name = "Anti-Speed (WalkSpeed Protegido)",
-                        risk = 0.5,
-                        type = "anti_exploit"
-                    })
-                end
-                
-                -- Verifica se consegue modificar
-                local success2 = pcall(function()
-                    humanoid.WalkSpeed = 16
-                end)
-                
-                if not success2 then
-                    table.insert(blocked, {
-                        name = "Anti-Speed Mod (WalkSpeed Bloqueado)",
-                        risk = 0.7,
-                        type = "anti_exploit"
-                    })
-                end
+        -- Teste 1: Acesso ao WalkSpeed
+        if humanoid then
+            local success1 = pcall(function()
+                local ws = humanoid.WalkSpeed
+            end)
+            
+            if not success1 then
+                table.insert(blocked, {
+                    name = "Anti-Speed (WalkSpeed Protegido)",
+                    risk = 0.7,
+                    type = "anti_speed"
+                })
+            end
+            
+            -- Teste 2: Modificação do WalkSpeed
+            local success2 = pcall(function()
+                local oldWS = humanoid.WalkSpeed
+                humanoid.WalkSpeed = 20
+                humanoid.WalkSpeed = oldWS
+            end)
+            
+            if not success2 then
+                table.insert(blocked, {
+                    name = "Anti-Speed (WalkSpeed Mod Bloqueado)",
+                    risk = 0.85,
+                    type = "anti_speed"
+                })
+            end
+            
+            -- Teste 3: Acesso ao JumpPower
+            local success3 = pcall(function()
+                local jp = humanoid.JumpPower
+            end)
+            
+            if not success3 then
+                table.insert(blocked, {
+                    name = "Anti-Speed (JumpPower Protegido)",
+                    risk = 0.6,
+                    type = "anti_speed"
+                })
+            end
+            
+            -- Teste 4: Modificação do JumpPower
+            local success4 = pcall(function()
+                local oldJP = humanoid.JumpPower
+                humanoid.JumpPower = 60
+                humanoid.JumpPower = oldJP
+            end)
+            
+            if not success4 then
+                table.insert(blocked, {
+                    name = "Anti-Speed (JumpPower Mod Bloqueado)",
+                    risk = 0.75,
+                    type = "anti_speed"
+                })
+            end
+            
+            -- Teste 5: Acesso ao HipHeight
+            local success5 = pcall(function()
+                local hh = humanoid.HipHeight
+            end)
+            
+            if not success5 then
+                table.insert(blocked, {
+                    name = "Anti-Speed (HipHeight Protegido)",
+                    risk = 0.5,
+                    type = "anti_speed"
+                })
+            end
+            
+            -- Teste 6: Modificação do HipHeight
+            local success6 = pcall(function()
+                local oldHH = humanoid.HipHeight
+                humanoid.HipHeight = 3
+                humanoid.HipHeight = oldHH
+            end)
+            
+            if not success6 then
+                table.insert(blocked, {
+                    name = "Anti-Speed (HipHeight Mod Bloqueado)",
+                    risk = 0.65,
+                    type = "anti_speed"
+                })
+            end
+            
+            -- Teste 7: PlatformStand (usado em speed hacks)
+            local success7 = pcall(function()
+                local ps = humanoid.PlatformStand
+            end)
+            
+            if not success7 then
+                table.insert(blocked, {
+                    name = "Anti-Speed (PlatformStand Protegido)",
+                    risk = 0.55,
+                    type = "anti_speed"
+                })
+            end
+            
+            -- Teste 8: AutoRotate (usado em speed hacks)
+            local success8 = pcall(function()
+                local ar = humanoid.AutoRotate
+                humanoid.AutoRotate = false
+                humanoid.AutoRotate = true
+            end)
+            
+            if not success8 then
+                table.insert(blocked, {
+                    name = "Anti-Speed (AutoRotate Protegido)",
+                    risk = 0.6,
+                    type = "anti_speed"
+                })
+            end
+            
+            -- Teste 9: UseJumpPower
+            local success9 = pcall(function()
+                local ujp = humanoid.UseJumpPower
+                humanoid.UseJumpPower = false
+                humanoid.UseJumpPower = true
+            end)
+            
+            if not success9 then
+                table.insert(blocked, {
+                    name = "Anti-Speed (UseJumpPower Protegido)",
+                    risk = 0.55,
+                    type = "anti_speed"
+                })
             end
         end
         
-        return blocked
-    end,
+        -- Teste 10: Velocity da RootPart
+        if rootPart then
+            local success10 = pcall(function()
+                local vel = rootPart.Velocity
+            end)
+            
+            if not success10 then
+                table.insert(blocked, {
+                    name = "Anti-Speed (Velocity Protegido)",
+                    risk = 0.7,
+                    type = "anti_speed"
+                })
+            end
+            
+            -- Teste 11: Modificação da Velocity
+            local success11 = pcall(function()
+                local oldVel = rootPart.Velocity
+                rootPart.Velocity = Vector3.new(0, 0, 0)
+                rootPart.Velocity = oldVel
+            end)
+            
+            if not success11 then
+                table.insert(blocked, {
+                    name = "Anti-Speed (Velocity Mod Bloqueado)",
+                    risk = 0.85,
+                    type = "anti_speed"
+                })
+            end
+            
+            -- Teste 12: AssemblyLinearVelocity
+            local success12 = pcall(function()
+                local alv = rootPart.AssemblyLinearVelocity
+                rootPart.AssemblyLinearVelocity = Vector3.new(0, 0, 0)
+            end)
+            
+            if not success12 then
+                table.insert(blocked, {
+                    name = "Anti-Speed (AssemblyVelocity Protegido)",
+                    risk = 0.8,
+                    type = "anti_speed"
+                })
+            end
+            
+            -- Teste 13: AssemblyAngularVelocity
+            local success13 = pcall(function()
+                local aav = rootPart.AssemblyAngularVelocity
+            end)
+            
+            if not success13 then
+                table.insert(blocked, {
+                    name = "Anti-Speed (AngularVelocity Protegido)",
+                    risk = 0.65,
+                    type = "anti_speed"
+                })
+            end
+        end
+        
+        -- Teste 14: BodyVelocity/BodyGyro (usados em speed hacks)
+        local success14 = pcall(function()
+            local bv = Instance.new("BodyVelocity")
+            bv.MaxForce = Vector3.new(400000, 0, 400000)
+            bv.Velocity = Vector3.new(0, 0, 0)
+            bv:Destroy()
+        end)
+        
+        if not success14 then
+            table.insert(blocked, {
+                name = "Anti-Speed (BodyVelocity Bloqueado)",
+                risk = 0.9,
+                type = "anti_speed"
+            })
+        end
+        
+        -- Teste 15: BodyGyro
+        local success15 = pcall(function()
+            local bg = Instance.new("BodyGyro")
+            bg.MaxTorque = Vector3.new(400000, 0, 400000)
+            bg.CFrame = CFrame.new()
+            bg:Destroy()
+        end)
+        
+        if not success15 then
+            table.insert(blocked, {
+                name = "Anti-Speed (BodyGyro Bloqueado)",
+                risk = 0.85,
+                type = "anti_speed"
+            })
+        end
+        
+        -- Teste 16: Verifica Remotes de velocidade
+        pcall(function()
+            local rs = game:GetService("ReplicatedStorage")
+            local speedRemotes = {"Speed", "Velocity", "WalkSpeed", "Boost", "Sprint", "Accelerate", "Dash"}
+            
+            for _, obj in ipairs(rs:GetDescendants()) do
+                if obj:IsA("RemoteEvent") or obj:IsA("RemoteFunction") then
+                    local name = obj.Name:lower()
+                    for _, keyword in ipairs(speedRemotes) do
+                        if name:find(keyword:lower()) then
+                            table.insert(blocked, {
+                                name = "Anti-Speed (Remote: " .. obj.Name .. ")",
+                                risk = 0.7,
+                                type = "anti_speed"
+                            })
+                            break
+                        end
+                    end
+                end
+            end
+        end)
+        
+        -- Teste 17: Verifica se há monitor de velocidade (limite máximo)
+        if humanoid then
+            local success17 = pcall(function()
+                humanoid.WalkSpeed = 500  -- Tenta velocidade absurda
+                humanoid.WalkSpeed = 16   -- Restaura
+            end)
+            
+            if not success17 then
+                table.insert(blocked, {
+                    name = "Anti-Speed (Limite Máximo Bloqueado)",
+                    risk = 0.9,
+                    type = "anti_speed"
+                })
+            end
+        end
+    end
+    
+    return blocked
+end,
     
     -- 10. Anti-God Mode
     AntiGod = function()
