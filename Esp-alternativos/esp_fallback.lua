@@ -1,4 +1,4 @@
--- Módulo ESP Fallback (Console) - Último Recurso
+-- Módulo ESP Fallback (Console)
 local ESP_Fallback = {}
 
 ESP_Fallback.Config = {
@@ -8,6 +8,9 @@ ESP_Fallback.Config = {
     ShowWeapon = true,
     TeamCheck = true
 }
+
+function ESP_Fallback.RemoveAll() end
+function ESP_Fallback.Stop() end
 
 function ESP_Fallback.Render(Players, LocalPlayer, Camera)
     local count = 0
@@ -20,43 +23,28 @@ function ESP_Fallback.Render(Players, LocalPlayer, Camera)
                 local dist = (Camera.CFrame.Position - hrp.Position).Magnitude
                 
                 if dist <= ESP_Fallback.Config.MaxDistance then
-                    -- Team check
                     if ESP_Fallback.Config.TeamCheck and player.Team == LocalPlayer.Team then
                         continue
                     end
                     
                     local info = "[ESP] " .. player.Name
-                    
-                    if ESP_Fallback.Config.ShowDistance then
-                        info = info .. " | " .. math.floor(dist) .. "m"
-                    end
-                    
-                    if ESP_Fallback.Config.ShowHealth then
-                        info = info .. " | HP: " .. math.floor(hum.Health)
-                    end
-                    
+                    if ESP_Fallback.Config.ShowDistance then info = info .. " | " .. math.floor(dist) .. "m" end
+                    if ESP_Fallback.Config.ShowHealth then info = info .. " | HP: " .. math.floor(hum.Health) end
                     if ESP_Fallback.Config.ShowWeapon then
                         local tool = player.Character:FindFirstChildOfClass("Tool")
-                        if tool then
-                            info = info .. " | " .. tool.Name
-                        end
+                        if tool then info = info .. " | " .. tool.Name end
                     end
-                    
                     print(info)
                     count = count + 1
                 end
             end
         end
     end
-    
-    if count > 0 then
-        print("[ESP] " .. count .. " jogadores detectados")
-    end
+    if count > 0 then print("[ESP] " .. count .. " jogadores detectados") end
 end
 
 function ESP_Fallback.Start()
-    print("[ESP Fallback] Modo console ativado!")
-    print("[ESP Fallback] Pressione F9 para ver os jogadores")
+    print("[ESP Fallback] Modo console ativado! Pressione F9 para ver os jogadores")
 end
 
 return ESP_Fallback
