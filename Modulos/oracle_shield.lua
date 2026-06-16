@@ -340,29 +340,201 @@ end,
         return blocked
     end,
     
-    -- 8. Anti-Teleport
-    AntiTeleport = function()
-        local blocked = {}
+  -- 8. Anti-Teleport (REFORÇADO)
+AntiTeleport = function()
+    local blocked = {}
+    
+    if LocalPlayer.Character then
+        local rootPart = LocalPlayer.Character:FindFirstChild("HumanoidRootPart")
+        local humanoid = LocalPlayer.Character:FindFirstChildOfClass("Humanoid")
         
-        if LocalPlayer.Character then
-            local rootPart = LocalPlayer.Character:FindFirstChild("HumanoidRootPart")
-            if rootPart then
-                local success = pcall(function()
-                    local cf = rootPart.CFrame
-                end)
-                
-                if not success then
-                    table.insert(blocked, {
-                        name = "Anti-Teleport (CFrame Protegido)",
-                        risk = 0.8,
-                        type = "anti_exploit"
-                    })
-                end
+        -- Teste 1: Acesso ao CFrame
+        if rootPart then
+            local success1 = pcall(function()
+                local cf = rootPart.CFrame
+                local pos = rootPart.Position
+                local rot = rootPart.Rotation
+            end)
+            
+            if not success1 then
+                table.insert(blocked, {
+                    name = "Anti-Teleport (CFrame Protegido)",
+                    risk = 0.9,
+                    type = "anti_teleport"
+                })
+            end
+            
+            -- Teste 2: Modificação do CFrame
+            local success2 = pcall(function()
+                local oldCFrame = rootPart.CFrame
+                rootPart.CFrame = oldCFrame + Vector3.new(0, 1, 0)
+                rootPart.CFrame = oldCFrame
+            end)
+            
+            if not success2 then
+                table.insert(blocked, {
+                    name = "Anti-Teleport (CFrame Mod Bloqueado)",
+                    risk = 0.95,
+                    type = "anti_teleport"
+                })
+            end
+            
+            -- Teste 3: Modificação da Position
+            local success3 = pcall(function()
+                local oldPos = rootPart.Position
+                rootPart.Position = oldPos + Vector3.new(0, 1, 0)
+                rootPart.Position = oldPos
+            end)
+            
+            if not success3 then
+                table.insert(blocked, {
+                    name = "Anti-Teleport (Position Mod Bloqueado)",
+                    risk = 0.9,
+                    type = "anti_teleport"
+                })
+            end
+            
+            -- Teste 4: AssemblyLinearVelocity (usado em teleports)
+            local success4 = pcall(function()
+                rootPart.AssemblyLinearVelocity = Vector3.new(0, 0, 0)
+            end)
+            
+            if not success4 then
+                table.insert(blocked, {
+                    name = "Anti-Teleport (Velocity Protegido)",
+                    risk = 0.85,
+                    type = "anti_teleport"
+                })
+            end
+            
+            -- Teste 5: Anchored (usado para travar no ar)
+            local success5 = pcall(function()
+                local oldAnchor = rootPart.Anchored
+                rootPart.Anchored = true
+                rootPart.Anchored = oldAnchor
+            end)
+            
+            if not success5 then
+                table.insert(blocked, {
+                    name = "Anti-Teleport (Anchored Bloqueado)",
+                    risk = 0.8,
+                    type = "anti_teleport"
+                })
             end
         end
         
-        return blocked
-    end,
+        -- Teste 6: Humanoid Seat (usado para teleport em veículos)
+        if humanoid then
+            local success6 = pcall(function()
+                local seat = humanoid.SeatPart
+            end)
+            
+            if not success6 then
+                table.insert(blocked, {
+                    name = "Anti-Teleport (Seat Protegido)",
+                    risk = 0.7,
+                    type = "anti_teleport"
+                })
+            end
+            
+            -- Teste 7: Humanoid RootPart
+            local success7 = pcall(function()
+                local rp = humanoid.RootPart
+            end)
+            
+            if not success7 then
+                table.insert(blocked, {
+                    name = "Anti-Teleport (RootPart Protegido)",
+                    risk = 0.85,
+                    type = "anti_teleport"
+                })
+            end
+            
+            -- Teste 8: MoveTo (usado para teleport)
+            local success8 = pcall(function()
+                humanoid:MoveTo(Vector3.new(0, 0, 0))
+            end)
+            
+            if not success8 then
+                table.insert(blocked, {
+                    name = "Anti-Teleport (MoveTo Bloqueado)",
+                    risk = 0.9,
+                    type = "anti_teleport"
+                })
+            end
+        end
+        
+        -- Teste 9: TweenService (usado para teleports suaves)
+        local success9 = pcall(function()
+            local tween = game:GetService("TweenService")
+            local info = TweenInfo.new(0.1)
+        end)
+        
+        if not success9 then
+            table.insert(blocked, {
+                name = "Anti-Teleport (TweenService Protegido)",
+                risk = 0.7,
+                type = "anti_teleport"
+            })
+        end
+        
+        -- Teste 10: Verifica RemoteEvents de teleporte
+        pcall(function()
+            local rs = game:GetService("ReplicatedStorage")
+            local teleportRemotes = {"Teleport", "TP", "Warp", "Jump", "Move", "Transport"}
+            
+            for _, obj in ipairs(rs:GetDescendants()) do
+                if obj:IsA("RemoteEvent") or obj:IsA("RemoteFunction") then
+                    local name = obj.Name:lower()
+                    for _, keyword in ipairs(teleportRemotes) do
+                        if name:find(keyword:lower()) then
+                            table.insert(blocked, {
+                                name = "Anti-Teleport (Remote: " .. obj.Name .. ")",
+                                risk = 0.75,
+                                type = "anti_teleport"
+                            })
+                            break
+                        end
+                    end
+                end
+            end
+        end)
+        
+        -- Teste 11: Verifica se há anti-teleport por distância máxima
+        if rootPart then
+            local success11 = pcall(function()
+                -- Tenta mover 1000 studs (teleport longo)
+                local oldPos = rootPart.Position
+                rootPart.CFrame = CFrame.new(oldPos + Vector3.new(1000, 0, 0))
+                rootPart.CFrame = CFrame.new(oldPos)
+            end)
+            
+            if not success11 then
+                table.insert(blocked, {
+                    name = "Anti-Teleport (Distância Máxima Bloqueada)",
+                    risk = 0.95,
+                    type = "anti_teleport"
+                })
+            end
+        end
+    end
+    
+    -- Teste 12: Verifica CharacterAdded (usado para detectar teleports)
+    local success12 = pcall(function()
+        local conn = LocalPlayer.CharacterAdded:Connect(function() end)
+        conn:Disconnect()
+    end)
+    
+    if not success12 then
+        table.insert(blocked, {
+            name = "Anti-Teleport (CharacterAdded Monitorado)",
+            risk = 0.8,
+            type = "anti_teleport"
+        })
+    end
+    
+    return blocked
+end,
     
     -- 9. Anti-Speed Hack
     AntiSpeed = function()
