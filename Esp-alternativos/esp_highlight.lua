@@ -1,11 +1,9 @@
--- Módulo ESP Highlight - Cor do Time
+-- Módulo ESP Highlight - Cor do Time (SIMPLIFICADO)
 local ESP_Highlight = {}
 
 ESP_Highlight.Config = {
-    TeamCheck = true,
-    ShowEnemy = true,
-    ShowAlly = false,
-    UseTeamColor = true
+    TeamCheck = true,       -- Se TRUE, mostra APENAS inimigos
+    UseTeamColor = true     -- Usa cor real do time
 }
 
 local highlights = {}
@@ -32,39 +30,30 @@ function ESP_Highlight.AddPlayer(player)
         local teamColor = GetTeamColor(player)
         highlight.FillColor = teamColor
         highlight.OutlineColor = teamColor
-    else
-        if player.Team == LocalPlayer.Team then
-            highlight.FillColor = Color3.fromRGB(50, 255, 50)
-        else
-            highlight.FillColor = Color3.fromRGB(255, 50, 50)
-        end
     end
     
-    if player.Team == LocalPlayer.Team then
-        highlight.Enabled = ESP_Highlight.Config.ShowAlly
+    -- ✅ TeamCheck: se ativado, mostra só inimigos
+    if ESP_Highlight.Config.TeamCheck and player.Team == LocalPlayer.Team then
+        highlight.Enabled = false  -- Aliado = escondido
     else
-        highlight.Enabled = ESP_Highlight.Config.ShowEnemy
+        highlight.Enabled = true   -- Inimigo = mostrado
     end
     
     highlights[player] = highlight
 end
 
-function ESP_Highlight.RemovePlayer(player)
-    if highlights[player] then
-        highlights[player]:Destroy()
-        highlights[player] = nil
+function ESP_Highlight.Remove(player, stopAll)
+    if stopAll then
+        for p, hl in pairs(highlights) do
+            pcall(function() hl:Destroy() end)
+        end
+        highlights = {}
+    elseif player then
+        if highlights[player] then
+            highlights[player]:Destroy()
+            highlights[player] = nil
+        end
     end
-end
-
-function ESP_Highlight.RemoveAll()
-    for player, hl in pairs(highlights) do
-        pcall(function() hl:Destroy() end)
-    end
-    highlights = {}
-end
-
-function ESP_Highlight.Stop()
-    ESP_Highlight.RemoveAll()
 end
 
 function ESP_Highlight.Render(Players, LocalPlayer, Camera)
@@ -73,34 +62,35 @@ function ESP_Highlight.Render(Players, LocalPlayer, Camera)
             if player.Character then
                 local hum = player.Character:FindFirstChildOfClass("Humanoid")
                 if hum and hum.Health > 0 then
-                    if not highlights[player] then ESP_Highlight.AddPlayer(player) end
+                    if not highlights[player] then 
+                        ESP_Highlight.AddPlayer(player) 
+                    end
                     
                     local hl = highlights[player]
                     if hl then
+                        -- Atualiza cor do time
                         if ESP_Highlight.Config.UseTeamColor then
                             local teamColor = GetTeamColor(player)
                             hl.FillColor = teamColor
                             hl.OutlineColor = teamColor
                         end
                         
+                        -- Transparência baseada na vida
                         local healthPercent = hum.Health / hum.MaxHealth
                         hl.FillTransparency = 0.3 + (1 - healthPercent) * 0.4
                         
+                        -- ✅ TeamCheck: esconde aliados
                         if ESP_Highlight.Config.TeamCheck then
-                            if player.Team == LocalPlayer.Team then
-                                hl.Enabled = ESP_Highlight.Config.ShowAlly
-                            else
-                                hl.Enabled = ESP_Highlight.Config.ShowEnemy
-                            end
+                            hl.Enabled = (player.Team ~= LocalPlayer.Team)
                         else
-                            hl.Enabled = true
+                            hl.Enabled = true  -- Mostra todos
                         end
                     end
                 else
-                    ESP_Highlight.RemovePlayer(player)
+                    ESP_Highlight.Remove(player)
                 end
             else
-                ESP_Highlight.RemovePlayer(player)
+                ESP_Highlight.Remove(player)
             end
         end
     end
@@ -113,7 +103,12 @@ function ESP_Highlight.Start()
             ESP_Highlight.AddPlayer(player)
         end)
     end)
-    Players.PlayerRemoving:Connect(function(player) ESP_Highlight.RemovePlayer(player) end)
+    Players.PlayerRemoving:Connect(function(player) 
+        ESP_Highlight.Remove(player) 
+    end)
 end
+
+ESP_Highlight.Stop = function() ESP_Highlight.Remove(nil, true) end
+ESP_Highlight.RemoveAll = function() ESP_Highlight.Remove(nil, true) end
 
 return ESP_Highlight
