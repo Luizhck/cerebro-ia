@@ -1,4 +1,4 @@
--- Módulo ESP SurfaceGui (3D) - Versão Completa
+-- Módulo ESP SurfaceGui (3D) - Completo
 local ESP_Surface = {}
 
 ESP_Surface.Config = {
@@ -26,7 +26,6 @@ function ESP_Surface.AddPlayer(player)
     sg.Parent = head
     sg.Enabled = true
     
-    -- Nome
     local nameLabel = Instance.new("TextLabel")
     nameLabel.Size = UDim2.new(1, 0, 0.5, 0)
     nameLabel.BackgroundTransparency = 1
@@ -37,7 +36,6 @@ function ESP_Surface.AddPlayer(player)
     nameLabel.TextSize = ESP_Surface.Config.TextSize
     nameLabel.Parent = sg
     
-    -- Vida
     local healthLabel = Instance.new("TextLabel")
     healthLabel.Size = UDim2.new(1, 0, 0.5, 0)
     healthLabel.Position = UDim2.new(0, 0, 0.5, 0)
@@ -49,11 +47,7 @@ function ESP_Surface.AddPlayer(player)
     healthLabel.TextSize = 10
     healthLabel.Parent = sg
     
-    surfaces[player] = {
-        Gui = sg,
-        Name = nameLabel,
-        Health = healthLabel
-    }
+    surfaces[player] = {Gui = sg, Name = nameLabel, Health = healthLabel}
 end
 
 function ESP_Surface.RemovePlayer(player)
@@ -61,6 +55,17 @@ function ESP_Surface.RemovePlayer(player)
         surfaces[player].Gui:Destroy()
         surfaces[player] = nil
     end
+end
+
+function ESP_Surface.RemoveAll()
+    for player, data in pairs(surfaces) do
+        pcall(function() data.Gui:Destroy() end)
+    end
+    surfaces = {}
+end
+
+function ESP_Surface.Stop()
+    ESP_Surface.RemoveAll()
 end
 
 function ESP_Surface.Render(Players, LocalPlayer, Camera)
@@ -71,13 +76,10 @@ function ESP_Surface.Render(Players, LocalPlayer, Camera)
                 local hrp = player.Character:FindFirstChild("HumanoidRootPart")
                 
                 if hum and hrp and hum.Health > 0 then
-                    if not surfaces[player] then
-                        ESP_Surface.AddPlayer(player)
-                    end
+                    if not surfaces[player] then ESP_Surface.AddPlayer(player) end
                     
                     local data = surfaces[player]
                     if data then
-                        -- Atualiza vida
                         local healthPercent = math.floor((hum.Health / hum.MaxHealth) * 100)
                         data.Health.Text = healthPercent .. "%"
                         data.Health.TextColor3 = Color3.fromRGB(
@@ -86,20 +88,15 @@ function ESP_Surface.Render(Players, LocalPlayer, Camera)
                             0
                         )
                         
-                        -- Team check
                         if ESP_Surface.Config.TeamCheck and player.Team == LocalPlayer.Team then
                             data.Gui.Enabled = false
                         else
                             data.Gui.Enabled = true
                         end
                         
-                        -- Distância
                         local dist = (Camera.CFrame.Position - hrp.Position).Magnitude
-                        if dist > ESP_Surface.Config.MaxDistance then
-                            data.Gui.Enabled = false
-                        end
+                        if dist > ESP_Surface.Config.MaxDistance then data.Gui.Enabled = false end
                         
-                        -- Nome
                         local tool = player.Character:FindFirstChildOfClass("Tool")
                         if tool then
                             data.Name.Text = player.Name .. " [" .. tool.Name .. "]"
@@ -124,10 +121,7 @@ function ESP_Surface.Start()
             ESP_Surface.AddPlayer(player)
         end)
     end)
-    
-    Players.PlayerRemoving:Connect(function(player)
-        ESP_Surface.RemovePlayer(player)
-    end)
+    Players.PlayerRemoving:Connect(function(player) ESP_Surface.RemovePlayer(player) end)
 end
 
 return ESP_Surface
