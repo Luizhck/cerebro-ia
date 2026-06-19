@@ -1,6 +1,6 @@
 -- ============================================
 -- ESP LIMPO (MINIMALISTA + CÍRCULO)
--- Versão: 1.2 (COMPLETA E CORRIGIDA)
+-- Versão: 1.3 (COMPLETA - COM TEAM COLOR E LINES)
 -- ============================================
 
 local ESP_LIMPO = {}
@@ -61,7 +61,7 @@ function ESP_LIMPO.CriarDrawings(player, espDrawings)
     d.HealthText.Transparency = 0.3
     
     -- === CÍRCULO AO REDOR ===
-    d.LineCircle.Thickness = 1
+    d.LineCircle.Thickness = 1.5
     d.LineCircle.Filled = false
     d.LineCircle.Transparency = 0.5
     d.LineCircle.Visible = false
@@ -151,6 +151,7 @@ function ESP_LIMPO.Atualizar(espDrawings, Players, LocalPlayer, Camera, Config, 
         end
         
         -- ===== VERIFICAÇÕES =====
+        -- ✅ WHITELIST (Amigos)
         local isWhitelisted = false
         for _, id in pairs(Config.Aimbot.Whitelist) do
             if id == player.UserId then
@@ -159,8 +160,11 @@ function ESP_LIMPO.Atualizar(espDrawings, Players, LocalPlayer, Camera, Config, 
             end
         end
         
+        -- ✅ TEAM CHECK (Cor do time)
         local isTeammate = (player.Team == LocalPlayer.Team)
+        local teamColor = player.TeamColor.Color  -- ⬅️ COR DO TIME
         
+        -- ✅ KILL LIST (Alvos marcados)
         local isMarked = false
         for _, id in pairs(Config.AI_Kill.KillList) do
             if id == player.UserId then
@@ -169,18 +173,24 @@ function ESP_LIMPO.Atualizar(espDrawings, Players, LocalPlayer, Camera, Config, 
             end
         end
         
-        -- ===== CORES MINIMALISTAS =====
+        -- ===== DEFINE CORES (COM TEAM COLOR) =====
         local corEquipe
+        
+        -- AMIGO (WHITELIST) - VERDE
         if isWhitelisted then
             corEquipe = CORES.WHITELIST
+        -- ALVO MARCADO - AMARELO
         elseif isMarked then
             corEquipe = CORES.MARCADO
+        -- COR GLOBAL (se ativado)
         elseif Config.ESP.UseGlobalColor and not Config.ESP.TeamCheck then
             corEquipe = Color3RGB(Config.ESP.GlobalColor.R, Config.ESP.GlobalColor.G, Config.ESP.GlobalColor.B)
+        -- TIME (usa a cor do time do jogador)
         elseif isTeammate then
             corEquipe = CORES.AMIGO
         else
-            corEquipe = CORES.INIMIGO
+            -- ⬅️ USA A COR DO TIME DO INIMIGO!
+            corEquipe = teamColor
         end
         
         -- ===== POSIÇÕES =====
@@ -190,7 +200,7 @@ function ESP_LIMPO.Atualizar(espDrawings, Players, LocalPlayer, Camera, Config, 
         local width = height * 0.6
         local boxPos = Vector2.new(pos.X - width / 2, pos.Y - height / 2)
         
-        -- Team Check
+        -- Team Check: Se for time e NÃO estiver na whitelist, NÃO mostra
         if Config.ESP.TeamCheck and isTeammate and not isWhitelisted then
             drawings.Box.Visible = false
             drawings.Name.Visible = false
@@ -259,12 +269,15 @@ function ESP_LIMPO.Atualizar(espDrawings, Players, LocalPlayer, Camera, Config, 
             drawings.HealthText.Visible = false
         end
         
-        -- ===== CÍRCULO AO REDOR (EM VEZ DE TRACER) =====
+        -- ===== CÍRCULO AO REDOR (ESP LINES) =====
+        -- ✅ AGORA FUNCIONA COM Config.ESP.Lines!
         if Config.ESP.Lines then
             local raio = math.max(width, height) * 0.6
             drawings.LineCircle.Position = Vector2.new(pos.X, pos.Y)
             drawings.LineCircle.Radius = raio
             drawings.LineCircle.Color = corEquipe
+            drawings.LineCircle.Thickness = 1.5
+            drawings.LineCircle.Transparency = 0.5
             drawings.LineCircle.Visible = true
         else
             drawings.LineCircle.Visible = false
