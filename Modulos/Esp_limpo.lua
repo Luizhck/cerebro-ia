@@ -1,6 +1,6 @@
 -- ============================================
--- ESP LIMPO (MINIMALISTA + CÍRCULO + TRANSPARENTE)
--- Versão: 1.4 (CORES MAIS FRACAS E CÍRCULO VISÍVEL)
+-- ESP LIMPO (MINIMALISTA + CÍRCULO FORÇADO)
+-- Versão: 1.6 (TESTE - CÍRCULO SEMPRE VISÍVEL)
 -- ============================================
 
 local ESP_LIMPO = {}
@@ -9,11 +9,11 @@ local ESP_LIMPO = {}
 -- CORES MINIMALISTAS (MAIS FRACAS)
 -- ============================================
 local CORES = {
-    INIMIGO = Color3.fromRGB(200, 100, 100),   -- ⬅️ Vermelho mais fraco
-    AMIGO = Color3.fromRGB(100, 200, 100),     -- ⬅️ Verde mais fraco
-    MARCADO = Color3.fromRGB(255, 200, 100),   -- ⬅️ Amarelo mais fraco
-    NPC = Color3.fromRGB(150, 150, 200),       -- ⬅️ Azul mais fraco
-    WHITELIST = Color3.fromRGB(100, 200, 150), -- ⬅️ Verde menta
+    INIMIGO = Color3.fromRGB(200, 100, 100),
+    AMIGO = Color3.fromRGB(100, 200, 100),
+    MARCADO = Color3.fromRGB(255, 200, 100),
+    NPC = Color3.fromRGB(150, 150, 200),
+    WHITELIST = Color3.fromRGB(100, 200, 150),
 }
 
 -- ============================================
@@ -35,36 +35,33 @@ function ESP_LIMPO.CriarDrawings(player, espDrawings)
     
     local d = espDrawings[player]
     
-    -- === BOX MAIS TRANSPARENTE ===
     d.Box.Filled = false
     d.Box.Thickness = 1
-    d.Box.Transparency = 0.6  -- ⬅️ MAIS TRANSPARENTE (era 0.3)
+    d.Box.Transparency = 0.6
     
-    -- === HEALTH BAR ===
     d.HealthBar.Filled = true
     d.HealthBar.Thickness = 0.5
     d.HealthBarOutline.Filled = true
     d.HealthBarOutline.Thickness = 0.5
     
-    -- === NAME MENOR E MAIS TRANSPARENTE ===
     d.Name.Outline = true
     d.Name.OutlineColor = Color3.new(0, 0, 0)
-    d.Name.Size = 10          -- ⬅️ MENOR (era 11)
-    d.Name.Transparency = 0.5 -- ⬅️ MAIS TRANSPARENTE (era 0.4)
+    d.Name.Size = 10
+    d.Name.Transparency = 0.5
     d.Name.Center = true
     
-    -- === HEALTH TEXT MENOR ===
     d.HealthText.Outline = true
     d.HealthText.OutlineColor = Color3.new(0, 0, 0)
-    d.HealthText.Size = 8     -- ⬅️ MENOR (era 9)
+    d.HealthText.Size = 8
     d.HealthText.Center = true
     d.HealthText.Transparency = 0.4
     
-    -- === CÍRCULO AO REDOR (MAIS VISÍVEL) ===
-    d.LineCircle.Thickness = 1.5
+    -- ⬅️ CÍRCULO CONFIGURADO
+    d.LineCircle.Thickness = 2
     d.LineCircle.Filled = false
-    d.LineCircle.Transparency = 0.4  -- ⬅️ MENOS TRANSPARENTE (era 0.5)
+    d.LineCircle.Transparency = 0.3
     d.LineCircle.Visible = false
+    d.LineCircle.ZIndex = 5
 end
 
 -- ============================================
@@ -165,7 +162,7 @@ function ESP_LIMPO.Atualizar(espDrawings, Players, LocalPlayer, Camera, Config, 
             end
         end
         
-        -- ===== DEFINE CORES (MAIS FRACAS) =====
+        -- ===== DEFINE CORES =====
         local corEquipe
         
         if isWhitelisted then
@@ -173,14 +170,13 @@ function ESP_LIMPO.Atualizar(espDrawings, Players, LocalPlayer, Camera, Config, 
         elseif isMarked then
             corEquipe = CORES.MARCADO
         elseif Config.ESP.UseGlobalColor and not Config.ESP.TeamCheck then
-            local r = Config.ESP.GlobalColor.R / 255 * 0.7  -- ⬅️ 70% da cor global
+            local r = Config.ESP.GlobalColor.R / 255 * 0.7
             local g = Config.ESP.GlobalColor.G / 255 * 0.7
             local b = Config.ESP.GlobalColor.B / 255 * 0.7
             corEquipe = Color3.new(r, g, b)
         elseif isTeammate then
             corEquipe = CORES.AMIGO
         else
-            -- ⬅️ COR DO TIME MAIS FRACA (70%)
             local r = teamColor.R * 0.7
             local g = teamColor.G * 0.7
             local b = teamColor.B * 0.7
@@ -190,6 +186,17 @@ function ESP_LIMPO.Atualizar(espDrawings, Players, LocalPlayer, Camera, Config, 
         -- ===== POSIÇÕES =====
         local topScreen = Camera:WorldToViewportPoint(root.Position + Vector3.new(0, 3, 0))
         local bottomScreen = Camera:WorldToViewportPoint(root.Position - Vector3.new(0, 4, 0))
+        
+        if not topScreen or not bottomScreen then
+            drawings.Box.Visible = false
+            drawings.Name.Visible = false
+            drawings.HealthBar.Visible = false
+            drawings.HealthBarOutline.Visible = false
+            drawings.HealthText.Visible = false
+            drawings.LineCircle.Visible = false
+            continue
+        end
+        
         local height = math.abs(topScreen.Y - bottomScreen.Y)
         local width = height * 0.6
         local boxPos = Vector2.new(pos.X - width / 2, pos.Y - height / 2)
@@ -205,18 +212,18 @@ function ESP_LIMPO.Atualizar(espDrawings, Players, LocalPlayer, Camera, Config, 
             continue
         end
         
-        -- ===== BOX (MAIS TRANSPARENTE) =====
+        -- ===== BOX =====
         if Config.ESP.Boxes then
             drawings.Box.Size = Vector2.new(width, height)
             drawings.Box.Position = boxPos
             drawings.Box.Color = corEquipe
-            drawings.Box.Transparency = 0.6  -- ⬅️ MAIS TRANSPARENTE
+            drawings.Box.Transparency = 0.6
             drawings.Box.Visible = true
         else
             drawings.Box.Visible = false
         end
         
-        -- ===== NAME (MENOR E MAIS TRANSPARENTE) =====
+        -- ===== NAME =====
         if Config.ESP.Names then
             local nameText = player.Name
             if isMarked then
@@ -235,7 +242,7 @@ function ESP_LIMPO.Atualizar(espDrawings, Players, LocalPlayer, Camera, Config, 
             drawings.Name.Text = nameText
             drawings.Name.Position = Vector2.new(pos.X, boxPos.Y - 14)
             drawings.Name.Color = corEquipe
-            drawings.Name.Transparency = 0.5  -- ⬅️ MAIS TRANSPARENTE
+            drawings.Name.Transparency = 0.5
             drawings.Name.Visible = true
         else
             drawings.Name.Visible = false
@@ -266,18 +273,22 @@ function ESP_LIMPO.Atualizar(espDrawings, Players, LocalPlayer, Camera, Config, 
             drawings.HealthText.Visible = false
         end
         
-        -- ===== CÍRCULO AO REDOR (ESP LINES) =====
-        if Config.ESP.Lines then
-            local raio = math.max(width, height) * 0.7  -- ⬅️ MAIOR (era 0.6)
-            drawings.LineCircle.Position = Vector2.new(pos.X, pos.Y)
-            drawings.LineCircle.Radius = raio
-            drawings.LineCircle.Color = corEquipe
-            drawings.LineCircle.Thickness = 1.5
-            drawings.LineCircle.Transparency = 0.4  -- ⬅️ MENOS TRANSPARENTE
-            drawings.LineCircle.Visible = true
-        else
-            drawings.LineCircle.Visible = false
-        end
+        -- ============================================================
+        -- 🎯 CÍRCULO AO REDOR - FORÇADO PARA TESTE!
+        -- ============================================================
+        -- ⬅️ IGNORA Config.ESP.Lines - SEMPRE DESENHA!
+        local raio = math.max(width, height) * 0.7
+        
+        drawings.LineCircle.Position = Vector2.new(pos.X, pos.Y)
+        drawings.LineCircle.Radius = raio
+        drawings.LineCircle.Color = corEquipe
+        drawings.LineCircle.Thickness = 2
+        drawings.LineCircle.Transparency = 0.3
+        drawings.LineCircle.ZIndex = 5
+        drawings.LineCircle.Visible = true  -- ⬅️ FORÇADO!
+        
+        -- ⬅️ DEBUG (aparece no console)
+        print("🔵 Círculo FORÇADO para:", player.Name, "Raio:", math.floor(raio))
     end
 end
 
