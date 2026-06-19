@@ -170,14 +170,26 @@ function ESP_LIMPO.Atualizar(espDrawings, Players, LocalPlayer, Camera, Config, 
             corEquipe = CORES.INIMIGO
         end
         
-        -- ===== POSIÇÕES =====
-        local topWorld = root.Position + Vector3New(0, 3, 0)
-        local bottomWorld = root.Position - Vector3New(0, 4, 0)
-        local topScreen = Camera:WorldToViewportPoint(topWorld)
-        local bottomScreen = Camera:WorldToViewportPoint(bottomWorld)
-        local height = math.abs(topScreen.Y - bottomScreen.Y)
-        local width = height * 0.6
-        local boxPos = Vector2New(pos.X - width / 2, pos.Y - height / 2)
+      -- ===== POSIÇÕES =====
+local topWorld = root.Position + Vector3New(0, 3, 0)
+local bottomWorld = root.Position - Vector3New(0, 4, 0)
+local topScreen = Camera:WorldToViewportPoint(topWorld)
+local bottomScreen = Camera:WorldToViewportPoint(bottomWorld)
+
+-- ⬅️ VERIFICAÇÃO PARA EVITAR ERRO
+if not topScreen or not bottomScreen then
+    drawings.Box.Visible = false
+    drawings.Name.Visible = false
+    drawings.HealthBar.Visible = false
+    drawings.HealthBarOutline.Visible = false
+    drawings.HealthText.Visible = false
+    drawings.LineCircle.Visible = false
+    continue
+end
+
+local height = math.abs(topScreen.Y - bottomScreen.Y)
+local width = height * 0.6
+local boxPos = Vector2New(pos.X - width / 2, pos.Y - height / 2)
         
         -- Team Check
         if Config.ESP.TeamCheck and isTeammate and not isWhitelisted then
